@@ -1,958 +1,348 @@
 <div align="center">
+  <img src="assets/financial-research-system-logo.svg" width="430" alt="Financial Research System Logo" />
 
-<img src="assets/financial-research-system-logo.svg" width="400">
+  <h1>Financial Research System</h1>
+  <p><strong>面向公司、行业与宏观研究的多 Agent 金融研报生成与知识库系统</strong></p>
+  <p>从资料采集、深度检索和数据分析，到图表生成、证据引用与研报导出，一条工作流完成。</p>
 
-Financial Research System: Evidence-Driven Financial Deep Research
----
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+" />
+    <img src="https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=111827" alt="React 18" />
+    <img src="https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white" alt="Vite 5" />
+    <img src="https://img.shields.io/badge/License-GPLv3-blue" alt="GPLv3 License" />
+  </p>
 
-*From data to insights, fully automated, multi-modal financial reports.*
-
-
-<p>
-
-</p>
-
-**Financial Research System** is a multi-agent research system that automates the entire financial research process — from data collection and analysis to generating publication-ready reports with professional charts and deep insights.
-
-🎯 **One ticker, one click, one comprehensive research report.**
-
-
-<br>
-
-*If this project helps you, please ⭐ star & 🍴 fork!*
-
+  <p>
+    <a href="#-核心能力">核心能力</a> ·
+    <a href="#-系统架构">系统架构</a> ·
+    <a href="#-快速开始">快速开始</a> ·
+    <a href="#-知识库与证据链">知识库</a> ·
+    <a href="#-报告示例">报告示例</a> ·
+    <a href="#-项目文档">项目文档</a>
+  </p>
 </div>
 
-## 🎥 Demo
+---
 
-https://github.com/user-attachments/assets/41963369-3dd4-4dfd-ad95-ef95cd092ebb
+## 📌 项目简介
+
+Financial Research System 是一个面向金融研究场景的异步多 Agent 系统。用户提供公司、股票、行业或宏观研究主题后，系统会拆解研究任务，调用金融数据与网页检索工具，执行 Python 数据分析并生成图表，最终输出结构化 Markdown、DOCX 和 PDF 研报。
+
+项目内置可审计知识库：研究者可以上传 PDF、DOCX、Markdown 和 TXT 资料，通过全文检索与向量检索召回证据，并在最终报告中保留稳定的 `[KB:evidence_id]` 引用。每次研究都会固化证据快照，便于回溯当时使用的原文、版本、发布日期和页码。
+
+<table>
+  <tr>
+    <td align="center" width="25%"><strong>🤖 多 Agent 研究</strong><br/>采集、分析、写作分工协作</td>
+    <td align="center" width="25%"><strong>📚 Agentic RAG</strong><br/>混合检索与按章节补充证据</td>
+    <td align="center" width="25%"><strong>📊 数据与图表</strong><br/>受限 Python 执行器完成分析</td>
+    <td align="center" width="25%"><strong>🔎 可追溯引用</strong><br/>证据编号、快照与审计文件</td>
+  </tr>
+</table>
+
+## ✨ 核心能力
+
+| 能力 | 实现方式 | 产生的结果 |
+| --- | --- | --- |
+| 自动化研究流水线 | `DataCollector → DataAnalyzer → ReportGenerator` 分阶段执行，同阶段任务受信号量控制并发 | 从研究问题到完整报告 |
+| 金融数据采集 | 集成 AkShare、efinance、yfinance、FRED 等数据工具 | 行情、财务、宏观与行业数据 |
+| 联网深度检索 | 支持 Serper、Bing、Bocha，以及 Playwright、Crawl4AI 和 PDF 解析 | 新闻、公告、网页与文档资料 |
+| 数据分析与绘图 | LLM 生成分析代码，受限执行器限制导入、写入目录与执行时间 | 指标分析、表格和可视化图表 |
+| 知识库入库 | PDF、DOCX、MD、TXT 解析，内容哈希去重、版本与状态管理 | 可管理、可检索的研究资料库 |
+| 混合检索 | SQLite FTS5 关键词召回 + 本地向量或 Qdrant + RRF 融合 | 兼顾中文关键词与语义相关性 |
+| 证据链 | 稳定证据编号、精确引用解析、研究快照、`.knowledge.json` 审计文件 | 报告结论可定位到原始证据 |
+| 断点恢复 | `VariableMemory` 持久化任务、数据、依赖、日志与知识快照 | 长任务失败后可继续执行 |
+| 可视化管理 | React + Ant Design 管理配置、任务、日志、报告与知识库 | 浏览器内完成主要操作 |
+| 多格式交付 | Markdown 原稿，经 Pandoc/docx2pdf 转换 | Markdown、DOCX、PDF 报告 |
+
+## 🧭 工作流程
+
+```mermaid
+flowchart LR
+    U[研究主题与配置] --> O[异步任务编排]
+    O --> C[DataCollector<br/>数据与资料采集]
+    C --> M[(VariableMemory)]
+    M --> A[DataAnalyzer<br/>分析与图表生成]
+    A --> M
+    M --> R[ReportGenerator<br/>大纲与章节写作]
+    KB[(Knowledge Base)] -->|检索证据| C
+    KB -->|检索证据| A
+    KB -->|章节级引用| R
+    R --> P[引用校验与后处理]
+    P --> OUT[Markdown / DOCX / PDF]
+    P --> AUDIT[Knowledge Audit JSON]
+```
+
+系统按任务优先级依次推进：优先级 1 负责采集，优先级 2 负责分析，优先级 3 负责报告生成；同一优先级中的任务可并发运行。任务结果统一写入 Variable Memory，后续 Agent 根据显式依赖读取数据，减少上下文重复传递。
+
+## 🏗️ 系统架构
 
 <p align="center">
-  <i>Easy-to-Use UI demo: one ticker ➜ automated research ➜ publish-ready report.</i>
+  <img src="assets/architecture.jpg" width="94%" alt="Financial Research System Architecture" />
 </p>
 
+> 上图展示基础研报流水线。当前版本在此基础上增加了知识库 API、混合检索、Agent 证据注入、稳定引用、任务快照和前端资料管理。
 
-<div align="center">
-  <a href="/assets/example_reports/Financial_Agent_Industry.pdf">
-    <img src="/assets/example6_industry.jpg" width="100%" alt="The Development of Financial AI Agents">
-  </a>
+### Agent 分工
 
-  <i>📄 Final Generated Report Example: The Development of Financial AI Agents (click pickture to read)</i>
-</div>
+| Agent | 主要职责 | 常用工具或上下文 |
+| --- | --- | --- |
+| `DataCollector` | 拆解采集任务，获取结构化金融数据与公开资料 | 金融 API、搜索、浏览器、PDF 解析、知识库 |
+| `DeepSearchAgent` | 对复杂问题进行多轮检索、阅读与信息整合 | 搜索引擎、网页抓取、长文本处理 |
+| `DataAnalyzer` | 根据已有数据编写和执行分析代码，产出结论与图表 | pandas、NumPy、Matplotlib、受限 Python 执行器 |
+| `ReportGenerator` | 生成大纲与章节，整合分析结果，处理引用与格式 | Variable Memory、知识证据、VLM、模板 |
 
+项目采用自研 `BaseAgent` 和 Agent Loop，没有依赖 LangChain、LangGraph、CrewAI 或 AutoGen。工具通过注册机制暴露给 Agent，模型通过 OpenAI-compatible API 接入，可分别配置文本模型、视觉模型和 Embedding 模型。
 
+## 📚 知识库与证据链
 
+知识库既可以与联网工具共同使用，也可以启用“仅知识库”模式，让文字研究只使用选中资料库中的证据。
 
-## 📑 Table of Contents
-- [✨ Key Features](#-key-features)
-- [🗺️ Roadmap](#-roadmap)
-- [🚀 Quick Start](#-quick-start)
-- [🎨 Result Examples](#-result-examples)
-- [🏗️ Architecture](#-architecture)
-- [📖 Advanced Usage](#-advanced-usage)
-- [📊 Reference Evaluation Results](#-reference-evaluation-results)
-- [📜 License and upstream notice](#license-and-upstream-notice)
-- [📖 Citation](#-citation)
-- [🙏 Acknowledgments](#-acknowledgments)
+```mermaid
+flowchart TD
+    D[PDF / DOCX / MD / TXT] --> I[解析、清洗、切片]
+    I --> META[(SQLite 元数据与版本)]
+    I --> FTS[(FTS5 全文索引)]
+    I --> VEC[(Local Vector / Qdrant)]
+    Q[Agent 查询] --> FTS
+    Q --> VEC
+    FTS --> RRF[RRF 融合与过滤]
+    VEC --> RRF
+    RRF --> E[证据片段<br/>KB:evidence_id]
+    E --> SNAP[研究证据快照]
+    SNAP --> REP[报告引用与审计面板]
+```
 
+知识库支持：
 
-## ✨ Key Features
+- 内容哈希去重、不可变文档记录、解析失败重试与重新索引；
+- 资料库、公司、证券代码、市场、行业和披露截止日期过滤；
+- 中文关键词检索，以及配置 Embedding 后的关键词与语义混合检索；
+- PDF 物理页码、DOCX/Markdown 章节与段落定位；
+- 删除后停止参与新检索，同时保留历史任务快照用于审计；
+- 在报告预览中展开证据原文、来源、日期、版本和定位信息。
 
-Feature descriptions and evaluation figures inherited from the upstream research publication are reference material; local changes are documented in [docs/UPSTREAM_NOTICE.md](docs/UPSTREAM_NOTICE.md).
+详细说明请阅读 [知识库使用文档](docs/KNOWLEDGE_BASE.md)。
 
-* **📊 Professional-Grade Report Generation**
-    One-click to generate 20,000+ word financial reports that rival human experts. Outperforms GPT-5 and Perplexity Deep Research in factual accuracy, analytical depth, and presentation quality.
+## 🖥️ 报告示例
 
-* **🤖 Programmable Code Agent (CAVM)**
-    Implementation of the *Code Agent with Variable Memory* architecture. Unlike rigid workflows, agents operate in a unified variable space, executing Python code to manipulate data, tools, and memory dynamically for transparent and reproducible analysis.
+### 公司研究报告
 
-* **📈 Automated Charting with VLM Feedback**
-    Solves the "ugly AI chart" problem. Built-in visual agents strictly follow professional standards, automatically correcting missing legends, wrong scales, or low information density through visual feedback loops.
+<p align="center">
+  <img src="assets/example5_company.png" width="94%" alt="Company Research Report Preview" />
+</p>
 
-* **🔍 Deep Research with Evidence Tracing**
-    No more black-box summaries. Every conclusion is derived from a transparent *Chain-of-Analysis*, with strict citations linking back to original data sources, ensuring high textual faithfulness and verifiable insights.
+### 行业研究报告
 
-* **⚡ Comprehensive Market Intelligence**
-    A unified interface for multi-source financial data. Access real-time stock quotes, financial statements, and macro indicators across A-share, HK, and **US markets**, powered by a robust Python-based tool ecosystem.
+<p align="center">
+  <img src="assets/example6_industry.jpg" width="94%" alt="Industry Research Report Preview" />
+</p>
 
-* **🇺🇸 US Market Support** *(New)*
-    Full US equity coverage via yfinance: company profiles, OHLCV price data, income statements, balance sheets, cash-flow statements, and institutional holder data. US macro indicators via FRED: CPI, GDP, unemployment, interest rates. Market indices: S&P 500, DJIA, NASDAQ.
+可直接查看仓库中的示例 PDF：
 
----
+- [中国移动公司研究报告](assets/example_reports/ChinaMobile.pdf)
+- [泡泡玛特公司研究报告](assets/example_reports/PopMart.pdf)
+- [商汤科技公司研究报告](assets/example_reports/SenseTime.pdf)
+- [优然牧业公司研究报告](assets/example_reports/YouranDairy.pdf)
+- [金融 Agent 行业研究报告](assets/example_reports/Financial_Agent_Industry.pdf)
 
-## 🗺️ Roadmap
+> 示例报告用于展示系统输出形式，不构成投资建议；其中的观点、数据与结论应结合原始来源重新核验。
 
-Financial Research System is still under development and there are many issues and room for improvement. We will continue to update. And we also sincerely welcome contributions on this open-source toolkit.
+## 🚀 快速开始
 
-- [x] Multi-agent collaborative research workflow (collector → analyzer → report)
-- [x] VLM-powered chart generation + critique loops for clean visuals
-- [x] Checkpoint/resume for long-running tasks
-- [x] Interactive web demo (frontend + backend)
-- [ ] General-purpose research adaptation beyond finance
-- [x] Multi-market support (US equity + macro via yfinance/FRED)
-- [ ] Plugin system for custom tools and agents
-- [x] Code execution sandbox hardening (timeouts, restricted imports)
-- [x] Rate limiter for API calls
-- [x] CI/CD pipeline (GitHub Actions)
+### 1. 环境要求
 
----
+- Python 3.10+，推荐 Python 3.11
+- Node.js 18+
+- 可访问的 OpenAI-compatible 文本模型与视觉模型服务
+- Embedding 模型可选；不配置时知识库仍可使用关键词检索
+- 完整 DOCX/PDF 转换需要 Pandoc，以及 docx2pdf 所需的系统文档转换环境
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.10+
-- Pandoc (for polished DOCX/PDF export)
-- Node.js (optional, for the web UI)
-- API keys for your LLM stack (LLM, VLM, Embedding, Search)
-
-### Installation
+### 2. 克隆与安装
 
 ```bash
-# Clone the repository
-git clone <repository-url> Financial-Research-System
+git clone git@github.com:Liousesixteen/Financial-Research-System.git
 cd Financial-Research-System
 
-# Install Python dependencies
-pip install -r requirements.txt
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-knowledge.txt
+
+npm ci --prefix demo/frontend
 ```
 
-Install Pandoc (recommended):
+### 3. 配置模型与搜索服务
 
-```bash
-# Linux
-sudo apt-get install pandoc
-
-# macOS
-brew install pandoc
-
-# Windows
-# Download the latest installer:
-# https://github.com/jgm/pandoc/releases/latest
-```
-
-Build the web UI (optional):
-
-```bash
-cd demo/frontend
-npm install
-npm run build
-```
-
-### Configuration
-
-Financial Research System uses a two-layer configuration:
-
-1) `.env` — model endpoints & API keys  
 ```bash
 cp .env.example .env
-# fill in DS_MODEL_NAME / API keys / base URLs
 ```
 
-2) `my_config.yaml` — research target & tasks  
+编辑 `.env`，至少配置研究所需的文本模型；下列服务均采用 OpenAI-compatible 接口：
+
+```dotenv
+DS_MODEL_NAME=your-text-model
+DS_BASE_URL=https://your-provider.example/v1
+DS_API_KEY=your-api-key
+
+VLM_MODEL_NAME=your-vision-model
+VLM_BASE_URL=https://your-provider.example/v1
+VLM_API_KEY=your-api-key
+
+EMBEDDING_MODEL_NAME=your-embedding-model
+EMBEDDING_BASE_URL=https://your-provider.example/v1
+EMBEDDING_API_KEY=your-api-key
+
+SERPER_API_KEY=your-search-api-key
+```
+
+### 4. 启动 Web 应用
+
+后端：
+
+```bash
+source .venv/bin/activate
+python -m uvicorn demo.backend.app:app --host 127.0.0.1 --port 8000
+```
+
+前端：
+
+```bash
+npm run dev --prefix demo/frontend -- --host 127.0.0.1
+```
+
+打开 [http://127.0.0.1:3000](http://127.0.0.1:3000)，知识库页面位于 `/#knowledge`。
+
+### 5. 运行命令行研报任务
+
+复制并修改示例配置：
+
+```bash
+cp docs/example_configs/my_config_company.yaml my_config.yaml
+python run_report.py --config my_config.yaml --fresh
+```
+
+`--fresh` 会创建新的研究与证据快照；省略后，系统会尝试从已有检查点恢复。
+
+## ⚙️ 知识库配置示例
+
+在研究 YAML 中加入以下配置：
+
 ```yaml
-target_name: "Your Company Name"
-stock_code: "000001"      # A-share or HK ticker
-target_type: "financial_company"  # financial_company | macro | industry | general
-output_dir: "./outputs/my-research"
-language: "en"            # en or zh
-
-custom_collect_tasks:
-  - "Balance sheet, income statement, cash flow"
-  - "Stock price data and trading volume"
+knowledge_base:
+  enabled: true
+  kb_ids:
+    - "your-library-id"
+  mode: hybrid                 # hybrid 或 knowledge_only
+  as_of: "2026-06-30"
+  top_k: 8
+  vector_backend: local        # local 或 qdrant
+  embedding_model: "your-embedding-model"
+  embedding_version: "1"
+  filters:
+    ticker: "600001"
+    market: "A"
 ```
 
-### Run Financial Research System
+知识库也提供独立服务，不配置生成模型即可体验资料管理与关键词检索：
 
-**CLI (full pipeline)**
 ```bash
-python run_report.py
+python -m uvicorn demo.backend.knowledge_app:app --host 127.0.0.1 --port 8000
 ```
 
-**Web Demo**
+CLI 示例：
+
 ```bash
-# Backend
-cd demo/backend && python app.py
-
-# Frontend
-cd demo/frontend && npm run dev
+python -m src.knowledge create "公司公告库"
+python -m src.knowledge list
+python -m src.knowledge ingest <library-id> ./annual-report.pdf
+python -m src.knowledge search <library-id> "毛利率下降原因"
 ```
-Open http://localhost:3000
+
+如需 Qdrant：
+
+```bash
+docker compose -f compose.knowledge.yaml up -d
+```
+
+## 🧰 技术栈
+
+| 层次 | 技术 |
+| --- | --- |
+| Agent 与编排 | Python、asyncio、自研 BaseAgent、工具注册、优先级任务流、Checkpoint |
+| 模型接入 | OpenAI Python SDK、OpenAI-compatible API、文本模型、VLM、Embedding |
+| 数据分析 | pandas、NumPy、Matplotlib、Seaborn |
+| 金融与检索 | AkShare、efinance、yfinance、FRED、Serper、Bing、Bocha |
+| 网页与文档 | Playwright、Crawl4AI、BeautifulSoup、pdfplumber、python-docx |
+| RAG 与存储 | SQLite、FTS5、jieba、本地向量检索、Qdrant、RRF |
+| 后端 | FastAPI、Uvicorn、Pydantic、WebSocket |
+| 前端 | React 18、Vite 5、Ant Design、React Router、Axios、React Markdown |
+| 测试 | pytest、pytest-asyncio、Hypothesis、httpx |
+| 交付 | Markdown、Pandoc、DOCX、PDF、Docker Compose |
+
+## 📁 项目结构
+
+```text
+Financial-Research-System/
+├── run_report.py                 # CLI 研报流水线入口
+├── src/
+│   ├── agents/                   # 采集、深搜、分析、报告 Agent
+│   ├── tools/                    # 金融、搜索、抓取、代码执行工具
+│   ├── memory/                   # Variable Memory 与任务恢复
+│   ├── knowledge/                # 入库、检索、API、Agent 证据接入
+│   ├── config/                   # 模型与研究任务配置
+│   └── template/                 # 公司、行业研报模板
+├── demo/
+│   ├── backend/                  # FastAPI、WebSocket、知识库接口
+│   └── frontend/                 # React + Ant Design 管理界面
+├── docs/                         # 使用说明、面试解析与示例配置
+├── tests/                        # Agent、工具、记忆与知识库测试
+├── assets/                       # 品牌、架构图和示例报告
+└── compose.knowledge.yaml        # 可选 Qdrant 服务
+```
+
+## ✅ 测试
+
+知识库与前端的核心检查：
+
+```bash
+python -m pytest tests/knowledge -q
+npm run build --prefix demo/frontend
+```
+
+覆盖范围包括文档解析、去重、过滤、混合检索、稳定证据编号、删除语义、任务快照、Agent 接入和恢复逻辑。完整测试命令及当前已知边界见 [知识库文档](docs/KNOWLEDGE_BASE.md#5-测试与已知边界)。
+
+## 🗺️ 后续计划
+
+- [ ] 扫描 PDF OCR 与复杂跨页表格重建
+- [ ] Excel 指标仓库和指标口径管理
+- [ ] 大规模知识库召回与延迟基准
+- [ ] 生产级异步任务队列与多用户权限
+- [ ] Agent 评测、链路追踪与研究质量看板
+- [ ] 知识图谱与跨报告实体关联
+
+## 📖 项目文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [知识库使用说明](docs/KNOWLEDGE_BASE.md) | 安装、入库、检索、Agent 接入、审计与边界 |
+| [高级用法](docs/ADVANCED_USAGE.md) | 自定义 Agent、工具、数据与报告流程 |
+| [面试完整解析](docs/INTERVIEW_GUIDE.zh-CN.md) | 项目讲解、架构原理和常见面试问答 |
+| [简历项目描述](docs/RESUME_PROJECT_DESCRIPTION.zh-CN.md) | 可直接用于简历的项目介绍与技术亮点 |
+| [来源与修改说明](docs/UPSTREAM_NOTICE.md) | 上游项目、许可证与本项目修改范围 |
+
+## ⚠️ 使用边界
+
+当前实现主要面向本机单用户研究。知识库任务恢复采用单进程设计，完整后端请使用单个 worker。受限 Python 执行器提供导入、目录和超时控制，但不等同于容器或虚拟机级安全隔离。对外提供服务前，应补充身份认证、权限控制、密钥管理、网络隔离与独立执行沙箱。
+
+本项目生成的内容仅用于技术研究与信息整理，不构成任何投资建议。金融数据可能存在延迟、遗漏或口径差异，使用者应核对原始公告和权威数据源。
+
+## 📄 License
+
+本项目按 [GNU General Public License v3.0](LICENSE) 发布。项目基于开源项目继续开发，来源、许可证义务及主要修改说明见 [docs/UPSTREAM_NOTICE.md](docs/UPSTREAM_NOTICE.md)。
 
 ---
-
-
-## 🎨 Result Examples
-
-Below is a **fully automated** research report on **The Development of Financial AI Agents**, generated entirely by this project.
-
 
 <div align="center">
-  <a href="/assets/example_reports/Financial_Agent_Industry.pdf">
-    <img src="/assets/example6_industry.jpg" width="100%" alt="The Development of Financial AI Agents">
-  </a>
+  <strong>Financial Research System</strong><br/>
+  让金融研究过程可编排、可恢复、可检索、可追溯。
 </div>
-
-<br>
-
-**Breakdown of the specific capabilities used to generate such reports:**
-
-<div align="center">
-
-| | |
-|:---:|:---:|
-| <img src="assets/example1.png" width="450" alt="Core revenue analysis"> | <img src="assets/example2.png" width="450" alt="Multi-dimensional financial data"> |
-| **Core revenue analysis** | **Multi-dimensional financial data** |
-| <img src="assets/example3.png" width="450" alt="Publication-grade report"> | <img src="assets/example4.png" width="450" alt="Chart-grounded analysis"> |
-| **Publication-grade report** | **Chart-grounded analysis** |
-
-</div>
-
-Full sample reports live in `assets/example_reports`.
-
-![Full report preview](/assets/example6_industry.jpg)
-
----
-
-## 🏗️ Architecture
-
-<p align="center">
-  <img src="assets/architecture.jpg" alt="Financial Research System Architecture" width="800"/>
-</p>
-
-Financial Research System is a multi-stage, memory-centric pipeline: Data Collection → Analysis + VLM chart refinement → Report drafting & polishing → Rendering. Each agent runs in a shared variable space with resumable checkpoints.
-
-**Agent roster**
-
-| Agent | Purpose | Key inputs | Outputs | Default tools/skills |
-|-------|---------|------------|---------|----------------------|
-| 📥 Data Collector | Route and gather structured/unstructured data | Task, ticker/market, custom tasks | Normalized datasets in memory | DeepSearch Agent; all financial/macro/industry tools |
-| 🔍 Deep Search Agent | Multi-hop web search + content fetch with source validation | Task, query | Search snippets + crawled pages with citations | Serper/Google search; web page fetcher |
-| 🔬 Data Analyzer | Code-first analysis, charting, VLM critique | Task, analysis task, collected data | Analysis report, charts + captions | DeepSearch Agent; custom palette injection |
-| 📝 Report Generator | Outline → sections → polish → cover/reference → DOCX/PDF | Task, outlines, analysis/memory | Publication-ready report (MD/DOCX/PDF) | DeepSearch Agent; Pandoc + docx2pdf pipeline |
-
-**Tool library (high-level)**
-
-| Name | Domain | Type | What it does |
-|------|--------|------|--------------|
-| Stock profile | Financial | Data API | Corporate profile (A/HK) |
-| Shareholding structure | Financial | Data API | Top holders, stakes, direct/indirect flags |
-| Equity valuation metrics | Financial | Data API | PE/PB/ROE/margins |
-| Stock candlestick data | Financial | Data API | Daily OHLCV with turnover/ROC |
-| Balance sheet | Financial | Data API | Pivoted balance sheet (HK/A) |
-| Income statement | Financial | Data API | Pivoted P&L (HK/A) |
-| Cash-flow statement | Financial | Data API | Pivoted cash flows (HK/A) |
-| CSI 300 / HSI / SSE / Nasdaq | Market Index | Data API | Daily index OHLCV |
-| China macro leverage ratio | Macro | Data API | Household/corporate/gov leverage |
-| Enterprise commodity price index | Macro/Industry | Data API | Commodity price index & sub-series |
-| China LPR benchmark rates | Macro | Data API | 1Y/5Y benchmark rates |
-| Urban surveyed unemployment | Macro | Data API | Unemployment by age/city |
-| Total social financing increment | Macro | Data API | TSF components since 2015 |
-| China GDP / CPI / PPI YoY | Macro | Data API | Core macro indicators |
-| US CPI YoY | Macro | Data API | US inflation series |
-| China exports/imports YoY, trade balance | Macro | Data API | External sector metrics |
-| Fiscal revenue / FX loan / Money supply / RRR | Macro | Data API | Monetary & fiscal trackers |
-| FX and gold reserves | Macro | Data API | Monthly reserves |
-| National stock trading stats | Macro | Data API | Market-wide trading metrics |
-| Economic policy uncertainty (CN) | Macro | Data API | EPU index |
-| Industrial value-added growth | Industry | Data API | Industrial production trends |
-| Above-scale industrial production YoY | Industry | Data API | Large enterprise production |
-| Manufacturing PMI (official) | Industry | Data API | PMI time series |
-| Caixin services PMI | Industry | Data API | Services PMI |
-| Consumer price / retail price index | Industry | Data API | CPI/RPI monthly |
-| GDP (monthly stats) | Industry | Data API | GDP-related monthly stats |
-| Producer price index | Industry | Data API | PPI (ex-factory) |
-| Consumer confidence index | Industry | Data API | Sentiment series |
-| Total retail sales of consumer goods | Industry | Data API | Retail sales + YoY/MoM |
-| Bing web search (requests) | Web | Search | HTML-based Bing search |
-| Google Search Engine (Serper) | Web | Search | API Google search |
-| Bocha web search | Web | Search | CN-focused search API |
-| DuckDuckGo / Sogou search | Web | Search | Alternative HTML searches |
-| Financial site in-domain search (requests/playwright) | Web | Search | Scoped finance domains |
-| Bing web search (Playwright) | Web | Search (browser) | Dynamic page search |
-| Bing image search | Web | Image search | Image/snippet retrieval |
-| Web page content fetcher | Web | Crawler | HTML/PDF crawl + markdown extraction |
-
----
-
-
-## 📖 Advanced Usage
-
-> **📚 Full Documentation**: See **[docs/advanced_usage.md](docs/advanced_usage.md)** for comprehensive technical documentation with code examples.
-
-<details>
-<summary><b>🔑 API Keys & Model Configuration</b></summary>
-
-### Environment Variables (`.env`)
-
-Financial Research System requires three model types. Create a `.env` file in the project root:
-
-```bash
-# LLM (Main reasoning, code generation)
-DS_MODEL_NAME="deepseek-chat"
-DS_API_KEY="sk-your-key"
-DS_BASE_URL="https://api.deepseek.com/v1"
-
-# VLM (Chart analysis and refinement)
-VLM_MODEL_NAME="qwen-vl-max"
-VLM_API_KEY="sk-your-key"
-VLM_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
-
-# Embedding (Semantic search)
-EMBEDDING_MODEL_NAME="text-embedding-v3"
-EMBEDDING_API_KEY="sk-your-key"
-EMBEDDING_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
-
-# Web Search (Optional)
-SERPER_API_KEY="your-serper-key"      # Google Search via Serper
-BOCHAAI_API_KEY="your-bocha-key"      # Bocha Search (Chinese-focused)
-```
-
-### Using Aggregator Endpoints
-
-```bash
-# Example: OpenRouter
-DS_MODEL_NAME="openai/gpt-4o"
-DS_API_KEY="sk-or-xxx"
-DS_BASE_URL="https://openrouter.ai/api/v1"
-```
-
-### Config Loading Logic
-
-The `Config` class loads settings in priority order:
-1. `src/config/default_config.yaml` (defaults)
-2. `my_config.yaml` (your overrides)
-3. Runtime `config_dict` (highest priority)
-
-Environment variables are resolved via `${VAR_NAME}` syntax in YAML.
-
-**Quick Test**:
-```python
-from src.config import Config
-config = Config(config_file_path='my_config.yaml')
-print(config.llm_dict.keys())  # Available models
-```
-
-</details>
-
-<details>
-<summary><b>📝 YAML Config File Reference</b></summary>
-
-### Complete `my_config.yaml` Structure
-
-```yaml
-# ===== Target Configuration =====
-target_name: "Company Name"          # Research target
-stock_code: "000001"                 # Ticker (A-share or HK format)
-target_type: 'financial_company'     # financial_company | macro | industry | general
-output_dir: "./outputs/my-research"  # Output directory
-language: 'en'                       # en | zh
-
-# ===== Template Paths =====
-reference_doc_path: 'src/template/report_template.docx'
-outline_template_path: 'src/template/company_outline.md'
-
-# ===== Custom Tasks (Optional) =====
-# If omitted, LLM auto-generates appropriate tasks
-custom_collect_tasks:
-  - "Financial statements (balance sheet, income, cash flow)"
-  - "Stock price history and trading volume"
-  - "Shareholding structure"
-
-custom_analysis_tasks:
-  - "Analyze revenue trends and growth drivers"
-  - "Evaluate profitability metrics (ROE, margins)"
-  - "Compare with industry peers"
-
-# ===== Cache/Resume Settings =====
-use_collect_data_cache: True
-use_analysis_cache: True
-use_report_outline_cache: True
-use_full_report_cache: True
-use_post_process_cache: True
-
-# ===== LLM Configuration =====
-llm_config_list:
-  - model_name: "${DS_MODEL_NAME}"
-    api_key: "${DS_API_KEY}"
-    base_url: "${DS_BASE_URL}"
-    generation_params:
-      temperature: 0.7
-      max_tokens: 32768
-      top_p: 0.95
-  - model_name: "${EMBEDDING_MODEL_NAME}"
-    api_key: "${EMBEDDING_API_KEY}"
-    base_url: "${EMBEDDING_BASE_URL}"
-  - model_name: "${VLM_MODEL_NAME}"
-    api_key: "${VLM_API_KEY}"
-    base_url: "${VLM_BASE_URL}"
-```
-
-### Target Types Explained
-
-| Type | Use Case | Default Tools |
-|------|----------|---------------|
-| `financial_company` | Listed company research | All financial + market tools |
-| `macro` | Macroeconomic analysis | Macro indicators + GDP/CPI tools |
-| `industry` | Industry/sector research | Industry + PMI tools |
-| `general` | General deep research | Web search only |
-
-</details>
-
-<details>
-<summary><b>✏️ Prompt System & Customization</b></summary>
-
-### Prompt Directory Structure
-
-```
-src/agents/
-├── data_analyzer/prompts/
-│   ├── general_prompts.yaml      # For general research
-│   └── financial_prompts.yaml    # For financial reports
-├── report_generator/prompts/
-│   ├── general_prompts.yaml
-│   ├── financial_company_prompts.yaml
-│   ├── financial_macro_prompts.yaml
-│   └── financial_industry_prompts.yaml
-├── data_collector/prompts/
-│   └── prompts.yaml
-└── search_agent/prompts/
-    └── general_prompts.yaml
-```
-
-### Using the Prompt Loader
-
-```python
-from src.utils.prompt_loader import get_prompt_loader
-
-# Load prompts for an agent
-loader = get_prompt_loader('data_analyzer', report_type='financial')
-
-# Get a specific prompt
-prompt = loader.get_prompt('data_analysis',
-    current_time="2024-12-01",
-    user_query="Analyze revenue trends",
-    data_info="Available datasets...",
-    target_language="English"
-)
-
-# List all available prompts
-print(loader.list_available_prompts())
-```
-
-### Creating Custom Prompts
-
-1. Create `src/agents/data_analyzer/prompts/my_custom_prompts.yaml`:
-
-```yaml
-data_analysis: |
-  You are an expert analyst for {industry_name}.
-  
-  ## Task
-  {user_query}
-  
-  ## Available Data
-  {data_info}
-  
-  ## Instructions
-  Use <execute> for Python code, <report> for final output.
-  All output must be in {target_language}.
-```
-
-2. Set `target_type: 'my_custom'` in config to load your prompts.
-
-### Key Prompt Variables
-
-| Variable | Description |
-|----------|-------------|
-| `{current_time}` | Timestamp for time-sensitive analysis |
-| `{user_query}` | The analysis task |
-| `{data_info}` | Available datasets catalog |
-| `{api_descriptions}` | Tool API documentation |
-| `{target_language}` | Output language (English/Chinese) |
-
-</details>
-
-<details>
-<summary><b>📑 Custom Outlines & Report Templates</b></summary>
-
-### Outline Template Configuration
-
-Set in `my_config.yaml`:
-```yaml
-outline_template_path: 'src/template/company_outline.md'
-```
-
-### Creating Custom Outlines
-
-**For Financial Company Reports**:
-```markdown
-# Executive Summary
-Key metrics, investment thesis, rating.
-
-# Company Overview
-- Business description and history
-- Management and governance
-- Shareholder structure
-
-# Industry Analysis
-- Market size and growth
-- Competitive landscape
-
-# Financial Analysis
-- Revenue and profitability trends
-- Balance sheet analysis
-- Cash flow analysis
-
-# Valuation
-- Comparable company analysis
-- DCF valuation
-- Target price
-
-# Risks
-- Key risks and mitigants
-```
-
-**For General Research**:
-```markdown
-# Introduction
-Research objectives and scope.
-
-# Background
-Context and literature review.
-
-# Methodology
-Data sources and approach.
-
-# Findings
-- Finding 1
-- Finding 2
-- Finding 3
-
-# Discussion
-Implications and analysis.
-
-# Conclusion
-Summary and recommendations.
-```
-
-### Reference Document (Word Styling)
-
-The `reference_doc_path` controls Word output formatting:
-
-```yaml
-reference_doc_path: 'src/template/report_template.docx'
-```
-
-**To customize**:
-1. Copy the default template
-2. Edit styles in Word (Heading 1/2/3, Normal, Table styles)
-3. Update the config path
-
-</details>
-
-<details>
-<summary><b>🎨 Chart Styling & Color Palettes</b></summary>
-
-### Default Color Palette
-
-```python
-# In src/agents/data_analyzer/data_analyzer.py
-custom_palette = [
-    "#8B0000",  # deep crimson
-    "#FF2A2A",  # bright red
-    "#FF6A4D",  # orange-red
-    "#FFDAB9",  # pale peach
-    "#FFF5E6",  # cream
-    "#FFE4B5",  # beige
-    "#A0522D",  # sienna
-    "#5C2E1F",  # dark brown
-]
-```
-
-### Custom Palette via Subclass
-
-```python
-class MyDataAnalyzer(DataAnalyzer):
-    async def _prepare_executor(self):
-        await super()._prepare_executor()
-        
-        # Corporate blue theme
-        my_palette = [
-            "#003366", "#0066CC", "#66B2FF",
-            "#CCE5FF", "#E6F2FF"
-        ]
-        self.code_executor.set_variable("custom_palette", my_palette)
-```
-
-### VLM Chart Critique Loop
-
-Charts go through iterative refinement:
-
-1. **LLM generates** chart code
-2. **Code executes** and saves PNG
-3. **VLM evaluates** quality (clarity, labels, aesthetics)
-4. **If not "FINISH"**: LLM refines based on VLM feedback
-5. **Repeat** up to `max_iterations` (default: 3)
-
-Customize in `draw_chart` prompt or adjust iterations:
-```python
-chart_code, chart_name = await self._draw_single_chart(
-    task=...,
-    max_iterations=5  # More refinement cycles
-)
-```
-
-</details>
-
-<details>
-<summary><b>🛠️ Adding Custom Tools</b></summary>
-
-### Tool Base Class
-
-```python
-from src.tools.base import Tool, ToolResult
-
-class MyCustomTool(Tool):
-    def __init__(self):
-        super().__init__(
-            name="My Custom Tool",
-            description="Description for LLM to understand usage",
-            parameters=[
-                {"name": "param1", "type": "str", 
-                 "description": "First parameter", "required": True},
-                {"name": "param2", "type": "int", 
-                 "description": "Optional parameter", "required": False},
-            ]
-        )
-    
-    async def api_function(self, param1: str, param2: int = 10):
-        # Fetch or compute data
-        result_data = await self._fetch_data(param1, param2)
-        
-        return [
-            ToolResult(
-                name=f"Result for {param1}",
-                description="What this data contains",
-                data=result_data,  # DataFrame, dict, list, etc.
-                source="Data source URL or description"
-            )
-        ]
-```
-
-### Auto-Registration
-
-Place your tool in the appropriate category folder:
-```
-src/tools/
-├── financial/
-│   └── my_stock_tool.py  ← Your new tool
-├── macro/
-├── industry/
-└── web/
-```
-
-Tools are **automatically registered** on import:
-```python
-from src.tools import list_tools, get_tool_by_name
-
-print(list_tools())  # Your tool appears here
-tool = get_tool_by_name('My Custom Tool')()
-result = await tool.api_function(param1='test')
-```
-
-### Example: Stock Technical Analysis Tool
-
-```python
-# src/tools/financial/technical_tool.py
-import pandas as pd
-from ..base import Tool, ToolResult
-
-class TechnicalAnalysisTool(Tool):
-    def __init__(self):
-        super().__init__(
-            name="Stock technical indicators",
-            description="Calculate SMA, RSI, MACD for a stock",
-            parameters=[
-                {"name": "stock_code", "type": "str", 
-                 "description": "Stock ticker", "required": True},
-            ],
-        )
-
-    async def api_function(self, stock_code: str):
-        import efinance as ef
-        
-        df = ef.stock.get_quote_history(stock_code)
-        # Calculate indicators...
-        df['SMA_20'] = df['收盘'].rolling(window=20).mean()
-        
-        return [ToolResult(
-            name=f"Technical indicators for {stock_code}",
-            description="SMA, RSI indicators",
-            data=df,
-            source="Calculated from exchange data"
-        )]
-```
-
-</details>
-
-<details>
-<summary><b>🤖 Adding Custom Agents</b></summary>
-
-### Agent Base Class
-
-```python
-from src.agents.base_agent import BaseAgent
-
-class MyCustomAgent(BaseAgent):
-    AGENT_NAME = 'my_custom_agent'
-    AGENT_DESCRIPTION = 'Description for use as a sub-agent'
-    NECESSARY_KEYS = ['task', 'custom_param']
-    
-    def __init__(self, config, tools=None, use_llm_name="deepseek-chat",
-                 enable_code=True, memory=None, agent_id=None):
-        if tools is None:
-            tools = self._get_default_tools()
-        super().__init__(config, tools, use_llm_name, enable_code, memory, agent_id)
-        
-        # Load prompts
-        from src.utils.prompt_loader import get_prompt_loader
-        self.prompt_loader = get_prompt_loader('my_custom_agent')
-    
-    async def _prepare_init_prompt(self, input_data: dict) -> list[dict]:
-        prompt = self.prompt_loader.get_prompt('main_prompt',
-            task=input_data['task'],
-            current_time=self.current_time
-        )
-        return [{"role": "user", "content": prompt}]
-    
-    # Custom action handlers
-    async def _handle_analyze_action(self, action_content: str):
-        result = await self._perform_analysis(action_content)
-        return {"action": "analyze", "result": result, "continue": True}
-    
-    async def _handle_final_action(self, action_content: str):
-        return {"action": "final", "result": action_content, "continue": False}
-```
-
-### Using Agents as Tools
-
-```python
-class ParentAgent(BaseAgent):
-    def _set_default_tools(self):
-        self.tools = [
-            MyCustomAgent(config=self.config, memory=self.memory),
-            DeepSearchAgent(config=self.config, memory=self.memory),
-        ]
-```
-
-</details>
-
-<details>
-<summary><b>💾 Checkpoint & Resume System</b></summary>
-
-### How It Works
-
-Each agent saves state during execution:
-```python
-await self.save(
-    state={
-        'conversation_history': conversation_history,
-        'current_round': current_round,
-    },
-    checkpoint_name='latest.pkl'
-)
-```
-
-### Checkpoint Locations
-
-```
-outputs/<target_name>/
-├── memory/
-│   └── memory.pkl           # Global memory state
-├── agent_working/
-│   ├── agent_data_collector_xxx/
-│   │   └── .cache/latest.pkl
-│   ├── agent_data_analyzer_xxx/
-│   │   ├── .cache/latest.pkl
-│   │   ├── .cache/charts.pkl
-│   │   └── images/
-│   └── agent_report_generator_xxx/
-│       └── .cache/
-│           ├── outline_latest.pkl
-│           ├── section_0.pkl
-│           └── report_latest.pkl
-└── logs/
-```
-
-### Controlling Resume
-
-```python
-# Resume from checkpoints (default)
-asyncio.run(run_report(resume=True))
-
-# Fresh start (ignores checkpoints)
-asyncio.run(run_report(resume=False))
-```
-
-### Memory Data Flow
-
-```python
-from src.memory import Memory
-
-memory = Memory(config=config)
-memory.load()  # Load from checkpoint
-
-# Access collected data
-data_list = memory.get_collect_data()
-
-# Access analysis results
-analyses = memory.get_analysis_result()
-
-# Semantic search
-relevant = await memory.retrieve_relevant_data(
-    query="revenue trends",
-    top_k=10,
-    embedding_model="text-embedding-v3"
-)
-```
-
-</details>
-
-<details>
-<summary><b>📚 Complete Code Examples</b></summary>
-
-### Example 1: Custom Company Analysis
-
-```python
-import asyncio
-import os
-from dotenv import load_dotenv
-load_dotenv()
-
-from src.config import Config
-from src.memory import Memory
-from src.agents import DataCollector, DataAnalyzer, ReportGenerator
-
-async def analyze_company():
-    config = Config(
-        config_file_path='my_config.yaml',
-        config_dict={
-            'target_name': 'Apple Inc.',
-            'stock_code': 'AAPL',
-            'target_type': 'financial_company',
-            'language': 'en',
-        }
-    )
-    
-    memory = Memory(config=config)
-    
-    # Run analysis
-    analyzer = DataAnalyzer(
-        config=config, memory=memory,
-        use_llm_name=os.getenv("DS_MODEL_NAME"),
-        use_vlm_name=os.getenv("VLM_MODEL_NAME"),
-        use_embedding_name=os.getenv("EMBEDDING_MODEL_NAME")
-    )
-    
-    await analyzer.async_run(
-        input_data={
-            'task': 'Apple Inc. Investment Research',
-            'analysis_task': 'Analyze iPhone vs Services revenue'
-        },
-        max_iterations=15,
-        enable_chart=True
-    )
-    
-    # Generate report
-    generator = ReportGenerator(config=config, memory=memory,
-        use_llm_name=os.getenv("DS_MODEL_NAME"),
-        use_embedding_name=os.getenv("EMBEDDING_MODEL_NAME"))
-    
-    await generator.async_run(
-        input_data={'task': 'Apple Inc. Investment Research'},
-        enable_chart=True
-    )
-
-asyncio.run(analyze_company())
-```
-
-### Example 2: General Deep Research
-
-```python
-async def deep_research(query: str):
-    config = Config(config_dict={
-        'target_name': query,
-        'target_type': 'general',
-        'language': 'en',
-    })
-    
-    memory = Memory(config=config)
-    
-    # Auto-generate analysis tasks
-    tasks = await memory.generate_analyze_tasks(
-        query=query,
-        use_llm_name=os.getenv("DS_MODEL_NAME"),
-        max_num=5
-    )
-    
-    for task in tasks:
-        analyzer = DataAnalyzer(config=config, memory=memory, ...)
-        await analyzer.async_run(
-            input_data={'task': query, 'analysis_task': task},
-            enable_chart=False
-        )
-    
-    generator = ReportGenerator(config=config, memory=memory, ...)
-    await generator.async_run(
-        input_data={'task': query},
-        enable_chart=False,
-        add_introduction=False
-    )
-
-asyncio.run(deep_research("Impact of AI on healthcare in 2024"))
-```
-
-
-<div align="center">
-
-| | |
-|:---:|:---:|
-| <img src="assets/evaluation_result_1.jpg" width="500" alt="Comparison with Deep Research Agents"> | <img src="assets/evaluation_result_2.jpg" width="500" alt="Generated Report Sample"> |
-| **Figure 1:** Performance comparison against SOTA agents | **Figure 2:** Key Fact Recall and Citation Authority |
-
-</div>
-
-## 📊 Reference Evaluation Results
-
-The upstream FinSight publication reports evaluations against leading commercial deep research systems, including **OpenAI Deep Research** and **Gemini-2.5-Pro Deep Research**, with an overall score of **8.09** for its reported setup.
-
-**Reported upstream findings:**
-- **Comparison:** The upstream setup scored **8.09** compared to Gemini-2.5-Pro Deep Research (6.82) and OpenAI Deep Research (6.11).
-- **Analysis:** Its **Two-Stage Writing Framework** was evaluated for information richness and analytical depth against single-pass LLM searches.
-- **Visualization:** Its **Iterative Vision-Enhanced Mechanism** reported a visualization score of **9.00** (vs. 4.65 for OpenAI).
-
-> 📄 For detailed experimental setup and complete results, please refer to our [paper](https://arxiv.org/abs/2510.16844).
-
----
-
-
----
-
-## 🙏 Acknowledgments
-
-- [AkShare](https://akshare.akfamily.xyz/) for financial data APIs
-- [eFinance](https://github.com/mpquant/efinance) for stock data
-- [Crawl4AI](https://github.com/unclecode/crawl4ai) for web crawling
-
-
-
-
-
-## Persistent knowledge library
-
-This checkout includes document upload, evidence retrieval, and report citations. See [知识库使用说明](docs/KNOWLEDGE_BASE.md) for setup, configuration, testing, and limitations. Start the UI at `http://127.0.0.1:3000/#knowledge`. Knowledge integration is disabled by default for existing report configurations.
-
-## License and upstream notice
-
-This project is distributed under the GNU General Public License v3. See [LICENSE](LICENSE) and [docs/UPSTREAM_NOTICE.md](docs/UPSTREAM_NOTICE.md) for the license, derivative-work notice, and original research citation.
