@@ -326,9 +326,6 @@ npm run build --prefix demo/frontend
 | --- | --- |
 | [知识库使用说明](docs/KNOWLEDGE_BASE.md) | 安装、入库、检索、Agent 接入、审计与边界 |
 | [高级用法](docs/ADVANCED_USAGE.md) | 自定义 Agent、工具、数据与报告流程 |
-| [面试完整解析](docs/INTERVIEW_GUIDE.zh-CN.md) | 项目讲解、架构原理和常见面试问答 |
-| [简历项目描述](docs/RESUME_PROJECT_DESCRIPTION.zh-CN.md) | 可直接用于简历的项目介绍与技术亮点 |
-| [来源与修改说明](docs/UPSTREAM_NOTICE.md) | 上游项目、许可证与本项目修改范围 |
 
 ## ⚠️ 使用边界
 
@@ -338,7 +335,7 @@ npm run build --prefix demo/frontend
 
 ## 📄 License
 
-本项目按 [GNU General Public License v3.0](LICENSE) 发布。项目基于开源项目继续开发，来源、许可证义务及主要修改说明见 [docs/UPSTREAM_NOTICE.md](docs/UPSTREAM_NOTICE.md)。
+本项目按 [GNU General Public License v3.0](LICENSE) 发布。
 
 ---
 
