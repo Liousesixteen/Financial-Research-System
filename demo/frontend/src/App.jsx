@@ -14,14 +14,15 @@ import ConfigPage from './pages/ConfigPage'
 import TasksPage from './pages/TasksPage'
 import ExecutionPage from './pages/ExecutionPage'
 import ReportsPage from './pages/ReportsPage'
+import KnowledgePage from './pages/KnowledgePage'
 import { useLanguage } from './contexts/LanguageContext'
 
 const { Header, Content, Sider } = Layout
 const { Title, Text } = Typography
 
 function App() {
-  const [showLanding, setShowLanding] = useState(true)
-  const [currentPage, setCurrentPage] = useState('config')
+  const [showLanding, setShowLanding] = useState(window.location.hash !== '#knowledge')
+  const [currentPage, setCurrentPage] = useState(window.location.hash === '#knowledge' ? 'knowledge' : 'config')
   const { language, toggleLanguage, t } = useLanguage()
 
   // Show landing page as entry
@@ -30,6 +31,7 @@ function App() {
   }
 
   const menuItems = [
+    { key: 'knowledge', icon: <FileSearchOutlined />, label: language === 'zh' ? '知识库' : 'Knowledge library' },
     {
       key: 'config',
       icon: <SettingOutlined />,
@@ -54,6 +56,8 @@ function App() {
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'knowledge':
+        return <KnowledgePage />
       case 'config':
         return <ConfigPage />
       case 'tasks':
@@ -132,8 +136,8 @@ function App() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', justifyContent: 'center' }}>
             <img
-              src="/finsight-logo-v3.png"
-              alt="FinSight Logo"
+              src="/financial-research-system-logo.svg"
+              alt="Financial Research System Logo"
               style={{
                 height: '80px',
                 width: '80px',

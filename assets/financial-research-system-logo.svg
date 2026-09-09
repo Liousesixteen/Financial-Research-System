@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" role="img" aria-labelledby="title desc">
+  <title id="title">Financial Research System</title>
+  <desc id="desc">Financial Research System logo</desc>
+  <rect width="160" height="160" rx="32" fill="#0b1220"/>
+  <path d="M42 116V44h20v72H42Zm28 0V64h20v52H70Zm28 0V52h20v64H98Z" fill="#67e8f9"/>
+  <path d="m42 93 28-25 28 10 28-28" fill="none" stroke="#f8fafc" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="190" y="92" font-family="Inter,Arial,sans-serif" font-size="38" font-weight="700" fill="#0b1220">Financial Research System</text>
+  <text x="193" y="124" font-family="Inter,Arial,sans-serif" font-size="17" letter-spacing="3" fill="#64748b">EVIDENCE-DRIVEN FINANCIAL RESEARCH</text>
+</svg>

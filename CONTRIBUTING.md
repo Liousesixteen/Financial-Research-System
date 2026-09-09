@@ -1,13 +1,13 @@
-# Contributing to FinSight
+# Contributing to Financial Research System
 
-Thank you for your interest in contributing to FinSight! This guide covers the development setup, testing, and PR workflow.
+Thank you for your interest in contributing to Financial Research System! This guide covers the development setup, testing, and PR workflow.
 
 ## Development Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/RUC-NLPIR/FinSight.git
-cd FinSight
+git clone <repository-url> Financial-Research-System
+cd Financial-Research-System
 
 # Create a virtual environment
 python -m venv .venv

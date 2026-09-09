@@ -77,12 +77,13 @@ class DataAnalyzer(BaseAgent):
     async def _prepare_executor(self):
         current_task_data = self.current_task_data
         tool_list = self.tools
-        collect_data_list = self.memory.get_collect_data()
+        collect_data_list = self.memory.get_collect_data(exclude_type=['search', 'click'])
         def _get_existed_data(data_id: int):
             return collect_data_list[data_id].data
         def _get_deepsearch_result(query: str):
             ds_agent = tool_list[0]
-            output =  asyncio.run(ds_agent.async_run(input_data={
+            from src.utils.async_bridge import get_async_bridge
+            output = get_async_bridge().run_async(ds_agent.async_run(input_data={
                 'task': current_task_data['task'],
                 'query': query
             }))
@@ -468,6 +469,10 @@ class DataAnalyzer(BaseAgent):
         enable_chart: bool = True,
         # stop_words: list[str] = ["</execute>", "</report>"]
     ) -> dict:
+        from src.knowledge.runtime import only_knowledge
+        if only_knowledge(self.config):
+            enable_chart = False
+
         input_data['enable_chart'] = enable_chart
         self.enable_chart = enable_chart
 

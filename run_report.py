@@ -20,7 +20,7 @@ IF_RESUME = True
 MAX_CONCURRENT = 3
 
 
-async def run_report(resume: bool = True, max_concurrent: int = None):
+async def run_report(resume: bool = True, max_concurrent: int = None, config_path: str = "my_config.yaml"):
     """
     Run report generation with optional concurrency limit.
     
@@ -36,7 +36,7 @@ async def run_report(resume: bool = True, max_concurrent: int = None):
     if max_concurrent is None:
         max_concurrent = int(os.getenv("MAX_CONCURRENT", "0")) or None
     config = Config(
-        config_file_path='my_config.yaml',
+        config_file_path=config_path,
         config_dict={}
     )
     collect_tasks = config.config['custom_collect_tasks']
@@ -58,6 +58,10 @@ async def run_report(resume: bool = True, max_concurrent: int = None):
         memory.load()
         logger.info("Memory state loaded")
     
+    from src.knowledge.runtime import initialize_session
+    if not memory.knowledge_state:
+        initialize_session(memory)
+
     # Generate additional collect and analysis tasks using LLM if not already generated
     research_query = f"Research target: {config.config['target_name']} (ticker: {config.config['stock_code']}), target type: {config.config.get('target_type', 'company')}"
     
@@ -262,5 +266,10 @@ async def run_report(resume: bool = True, max_concurrent: int = None):
 
 
 if __name__ == '__main__':
-    asyncio.run(run_report(resume=IF_RESUME, max_concurrent=MAX_CONCURRENT))
+    parser = argparse.ArgumentParser(description='Generate a Financial Research System research report')
+    parser.add_argument('--config', default='my_config.yaml')
+    parser.add_argument('--fresh', action='store_true', help='Start fresh instead of resuming an old snapshot')
+    parser.add_argument('--max-concurrent', type=int, default=MAX_CONCURRENT)
+    args = parser.parse_args()
+    asyncio.run(run_report(resume=IF_RESUME and not args.fresh, max_concurrent=args.max_concurrent, config_path=args.config))
 

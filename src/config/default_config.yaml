@@ -32,3 +32,11 @@ llm_config_list:
   - model_name: "${VLM_MODEL_NAME}"
     api_key: "${VLM_API_KEY}"
     base_url: "${VLM_BASE_URL}"
+knowledge_base:
+  enabled: false
+  kb_ids: []
+  mode: hybrid
+  as_of: ''
+  top_k: 8
+  vector_backend: local
+  qdrant_url: http://localhost:6333

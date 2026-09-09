@@ -298,6 +298,9 @@ class DeepSearchAgent(BaseAgent):
         checkpoint_name: str = 'deepsearch_latest.pkl',
         # stop_words: list[str] = ["</click>", "</search>", "</report>"]
     ) -> dict:
+        from src.knowledge.runtime import only_knowledge
+        if only_knowledge(self.config):
+            return {'final_result': 'External search is disabled. Use the supplied knowledge evidence.'}
         input_data['max_iterations'] = max_iterations
         self.max_iterations = max_iterations
         await self._prepare_executor()

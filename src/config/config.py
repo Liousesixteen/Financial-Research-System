@@ -9,23 +9,47 @@ class Config:
         # load default config
         current_path = os.path.dirname(os.path.realpath(__file__))
         default_file_path = os.path.join(current_path, "default_config.yaml")
-        self.config = self._load_config(default_file_path)
+        self.config = self._load_config(default_file_path, resolve_env=False)
 
         # load from file
         self.config_file_path = config_file_path
         if config_file_path is not None:
-            file_config = self._load_config(config_file_path)
-            self.config.update(file_config)
+            file_config = self._load_config(config_file_path, resolve_env=False)
+            self._merge(self.config, file_config)
         
         # load from dict
-        self.config.update(config_dict)
+        self._merge(self.config, config_dict)
         
+        self.config = self._resolve_env(self.config)
         self._set_dirs()
         self._set_llms()
         self._set_rate_limiter()
 
     
-    def _load_config(self, config_file_path):
+    @staticmethod
+    def _merge(target, incoming):
+        for key, value in incoming.items():
+            if isinstance(value, dict) and isinstance(target.get(key), dict):
+                Config._merge(target[key], value)
+            else:
+                target[key] = value
+
+    @staticmethod
+    def _resolve_env(obj):
+        if isinstance(obj, dict):
+            return {k: Config._resolve_env(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [Config._resolve_env(v) for v in obj]
+        if isinstance(obj, str):
+            def replace(match):
+                value = os.getenv(match.group(1))
+                if value is None:
+                    raise ValueError(f"Environment variable '{match.group(1)}' is not set")
+                return value
+            return re.sub(r'\$\{([^}]+)\}', replace, obj)
+        return obj
+
+    def _load_config(self, config_file_path, resolve_env=True):
         def build_yaml_loader():
             loader = yaml.FullLoader
             loader.add_implicit_resolver(
@@ -44,28 +68,6 @@ class Config:
             )
             return loader
     
-        def replace_env_vars(obj):
-            """Recursively replace ${VAR_NAME} with environment variables"""
-            if isinstance(obj, dict):
-                return {key: replace_env_vars(value) for key, value in obj.items()}
-            elif isinstance(obj, list):
-                return [replace_env_vars(item) for item in obj]
-            elif isinstance(obj, str):
-                # Match ${VAR_NAME} pattern
-                pattern = r'\$\{([^}]+)\}'
-                matches = re.findall(pattern, obj)
-                if matches:
-                    result = obj
-                    for var_name in matches:
-                        env_value = os.getenv(var_name)
-                        if env_value is None:
-                            raise ValueError(f"Environment variable '{var_name}' is not set")
-                        result = result.replace(f"${{{var_name}}}", env_value)
-                    return result
-                return obj
-            else:
-                return obj
-    
         yaml_loader = build_yaml_loader()
         file_config = dict()
         if os.path.exists(config_file_path):
@@ -81,7 +83,7 @@ class Config:
             raise ValueError(f"Config file not found: {config_file_path}")
         
         # Replace environment variables in the loaded config
-        file_config = replace_env_vars(file_config)
+        file_config = self._resolve_env(file_config) if resolve_env else file_config
         return file_config
     
     

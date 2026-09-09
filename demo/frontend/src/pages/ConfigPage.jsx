@@ -25,6 +25,7 @@ import {
     ClockCircleOutlined
 } from '@ant-design/icons'
 import { getConfig, updateConfig, saveConfig, loadConfig, listConfigs, deleteConfig } from '../api/client'
+import KnowledgeSettings from '../components/KnowledgeSettings'
 import { useLanguage } from '../contexts/LanguageContext'
 
 const { Title, Text } = Typography
@@ -68,6 +69,7 @@ function ConfigPage() {
 
                 // Set basic config
                 form.setFieldsValue({
+                    knowledge_base: config.knowledge_base || { enabled: false, kb_ids: [], mode: 'hybrid', as_of: '', vector_backend: 'local', qdrant_url: 'http://localhost:6333' },
                     target_name: config.target_name,
                     stock_code: config.stock_code,
                     output_dir: config.output_dir,
@@ -148,6 +150,7 @@ function ConfigPage() {
             }))
 
             const configData = {
+                knowledge_base: values.knowledge_base,
                 target_name: values.target_name,
                 stock_code: values.stock_code,
                 output_dir: values.output_dir || 'outputs/demo',
@@ -231,6 +234,7 @@ function ConfigPage() {
                     form={form}
                     layout="vertical"
                     initialValues={{
+                        knowledge_base: { enabled: false, kb_ids: [], mode: 'hybrid', as_of: '', vector_backend: 'local', qdrant_url: 'http://localhost:6333' },
                         output_dir: 'outputs/demo',
                         reference_doc_path: 'src/config/report_template.docx',
                         outline_template_path: 'src/template/company_outline.md',
@@ -294,6 +298,7 @@ function ConfigPage() {
                         </Row>
                     </Card>
 
+                    <KnowledgeSettings />
                     {/* LLM Configurations */}
                     <Card
                         title={

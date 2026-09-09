@@ -34,3 +34,7 @@ pydantic
 python-multipart
 
 
+
+# Knowledge library routes use Pydantic v2 and optional Qdrant
+pydantic>=2.7,<3
+qdrant-client>=1.19,<1.20

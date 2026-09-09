@@ -1,6 +1,6 @@
-# FinSight Advanced Usage Guide
+# Financial Research System Advanced Usage Guide
 
-This comprehensive guide covers advanced configuration, customization, and extension of FinSight. It's organized into the following sections:
+This comprehensive guide covers advanced configuration, customization, and extension of Financial Research System. It's organized into the following sections:
 
 ## 📑 Table of Contents
 
@@ -19,7 +19,7 @@ This comprehensive guide covers advanced configuration, customization, and exten
 - [Visual Styling](#visual-styling)
   - [Chart Color Palettes](#chart-color-palettes)
   - [VLM Critique Loop](#vlm-critique-loop)
-- [Extending FinSight](#extending-finsight)
+- [Extending Financial Research System](#extending-financial-research-system)
   - [Adding Custom Tools](#adding-custom-tools)
   - [Adding Custom Agents](#adding-custom-agents)
   - [Tool Auto-Registration System](#tool-auto-registration-system)
@@ -32,7 +32,7 @@ This comprehensive guide covers advanced configuration, customization, and exten
 
 ## Architecture Overview
 
-FinSight is a multi-agent system built around the **Code Agent with Variable Memory (CAVM)** architecture. The core principle is that all agents operate in a **unified variable space**, executing Python code to manipulate data, tools, and memory dynamically.
+Financial Research System is a multi-agent system built around the **Code Agent with Variable Memory (CAVM)** architecture. The core principle is that all agents operate in a **unified variable space**, executing Python code to manipulate data, tools, and memory dynamically.
 
 ### Core Components
 
@@ -90,7 +90,7 @@ Each agent follows a unified execution loop:
 
 ### API Keys & Model Configuration
 
-FinSight uses a **two-layer configuration** system:
+Financial Research System uses a **two-layer configuration** system:
 
 #### Layer 1: `.env` File (Secrets)
 
@@ -264,7 +264,7 @@ response = await llm.generate(messages=[{"role": "user", "content": "Hello"}])
 
 ### Prompt Loader Architecture
 
-FinSight uses a **YAML-based prompt system** that supports different report types and easy customization.
+Financial Research System uses a **YAML-based prompt system** that supports different report types and easy customization.
 
 #### Directory Structure
 
@@ -403,7 +403,7 @@ Key prompts in `src/agents/report_generator/prompts/`:
 
 ### Custom Outline Templates
 
-FinSight supports custom outline templates to control report structure.
+Financial Research System supports custom outline templates to control report structure.
 
 #### Template Location
 
@@ -565,7 +565,7 @@ pandoc_cmd = [
 
 ### Chart Color Palettes
 
-FinSight uses a custom color palette for consistent, professional charts.
+Financial Research System uses a custom color palette for consistent, professional charts.
 
 #### Default Palette
 
@@ -694,11 +694,11 @@ async def _draw_single_chart(
 
 ---
 
-## Extending FinSight
+## Extending Financial Research System
 
 ### Adding Custom Tools
 
-Tools are the data acquisition layer for FinSight agents.
+Tools are the data acquisition layer for Financial Research System agents.
 
 #### Tool Base Class
 
@@ -960,7 +960,7 @@ class ParentAgent(BaseAgent):
 
 ### Checkpoint & Resume
 
-FinSight's checkpoint system enables resuming interrupted runs.
+Financial Research System's checkpoint system enables resuming interrupted runs.
 
 #### How Checkpoints Work
 

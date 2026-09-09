@@ -1,5 +1,5 @@
 """
-Finsight Tools Module
+Financial Research System Tools Module
 
 This module provides a unified interface for accessing all available financial data collection tools.
 """

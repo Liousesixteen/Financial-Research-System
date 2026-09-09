@@ -34,6 +34,7 @@ class Memory:
         self.data = []
         self.dependency: Dict[str, List[str]] = {} # parent_agent_id -> [child_agent_id]
         self.task_mapping = [] # [{task_key, agent_class_name, task_input, agent_id, agent_kwargs}, ...]
+        self.knowledge_state = {}
         self.data2embedding = {} # name+description -> embedding
         self.generated_analysis_tasks = []
         self.generated_collect_tasks = []
@@ -57,6 +58,7 @@ class Memory:
         # Note: agent instances themselves are not saved—only metadata.
         # Agents are reloaded on demand from their checkpoints.
         memory_state = {
+            'knowledge_state': self.knowledge_state,
             'log': self.log,
             'data': self.data,
             'dependency': self.dependency,
@@ -102,6 +104,11 @@ class Memory:
             with open(target_path, 'rb') as f:
                 memory_state = dill.load(f)
             
+            from src.knowledge.runtime import signature
+            saved_knowledge = memory_state.get('knowledge_state', {})
+            if saved_knowledge.get('signature', '') != signature(self.config):
+                raise ValueError('Knowledge configuration changed; start a fresh run')
+            self.knowledge_state = saved_knowledge
             self.log = memory_state.get('log', [])
             self.data = memory_state.get('data', [])
             self.dependency = memory_state.get('dependency', {})
@@ -121,6 +128,8 @@ class Memory:
             except Exception:
                 pass
             return True
+        except ValueError:
+            raise
         except Exception as e:
             self.logger.error(f"Failed to load memory state: {e}", exc_info=True)
             return False

@@ -219,8 +219,8 @@ function LandingPage({ onEnter }) {
                         position: 'relative'
                     }}>
                         <img
-                            src="/finsight-logo-v3.png"
-                            alt="FinSight Logo"
+                            src="/financial-research-system-logo.svg"
+                            alt="Financial Research System Logo"
                             style={{
                                 height: '180px',
                                 width: '180px',

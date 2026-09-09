@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "finsight"
+name = "financial-research-system"
 version = "0.2.0"
-description = "FinSight: Multi-agent financial deep research system for publication-ready reports"
+description = "Financial Research System: multi-agent financial deep research system for publication-ready reports"
 readme = "README.md"
 license = {text = "GPL-3.0"}
 requires-python = ">=3.10"
 authors = [
-    {name = "RUC-NLPIR"},
+    {name = "fyy"},
 ]
 keywords = ["finance", "research", "multi-agent", "llm", "report-generation"]
 classifiers = [
@@ -57,12 +57,6 @@ web = [
     "playwright>=1.40",
     "fake-useragent>=1.4",
 ]
-
-[project.urls]
-Homepage = "https://github.com/RUC-NLPIR/FinSight"
-Repository = "https://github.com/RUC-NLPIR/FinSight"
-Documentation = "https://deepwiki.com/RUC-NLPIR/FinSight"
-"Bug Tracker" = "https://github.com/RUC-NLPIR/FinSight/issues"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

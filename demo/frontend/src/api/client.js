@@ -68,3 +68,20 @@ export const createWebSocketConnection = (onMessage, onError, onClose) => {
 
 export default client
 
+
+// Persistent knowledge library
+export const listKnowledgeLibraries = () => client.get('/api/knowledge/libraries')
+export const createKnowledgeLibrary = (name) => client.post('/api/knowledge/libraries', { name })
+export const renameKnowledgeLibrary = (id, name) => client.patch(`/api/knowledge/libraries/${id}`, { name })
+export const listKnowledgeDocuments = (id) => client.get(`/api/knowledge/libraries/${id}/documents`)
+export const uploadKnowledgeDocument = (id, file, metadata) => {
+    const data = new FormData()
+    data.append('file', file)
+    data.append('metadata', JSON.stringify(metadata))
+    return client.post(`/api/knowledge/libraries/${id}/documents`, data, { headers: { 'Content-Type': 'multipart/form-data' } })
+}
+export const getKnowledgeDocument = (id) => client.get(`/api/knowledge/documents/${id}`)
+export const deleteKnowledgeDocument = (id) => client.delete(`/api/knowledge/documents/${id}`)
+export const reindexKnowledgeDocument = (id) => client.post(`/api/knowledge/documents/${id}/reindex`)
+export const searchKnowledge = (data) => client.post('/api/knowledge/search', data)
+export const knowledgeOriginalUrl = (id, page) => `${API_BASE_URL}/api/knowledge/documents/${id}/original${page ? `#page=${page}` : ''}`

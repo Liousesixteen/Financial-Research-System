@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/finsight-logo-v2.png" width="400">
+<img src="assets/financial-research-system-logo.svg" width="400">
 
-FinSight: Towards Real-World Financial Deep Research
+Financial Research System: Evidence-Driven Financial Deep Research
 ---
 
 *From data to insights, fully automated, multi-modal financial reports.*
@@ -10,16 +10,9 @@ FinSight: Towards Real-World Financial Deep Research
 
 <p>
 
-[![arXiv](https://img.shields.io/badge/arXiv-2510.16844-b31b1b.svg?style=flat)](https://arxiv.org/abs/2510.16844)
-[![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
-<a href="https://deepwiki.com/RUC-NLPIR/FinSight"><img src="https://devin.ai/assets/deepwiki-badge.png" alt="DeepWiki Document" height="20"/></a>
-[![AFAC2025 Track 4](https://img.shields.io/badge/🏆_AFAC2025-1st_Place_(1/1289)-gold.svg?style=flat)](https://tianchi.aliyun.com/specials/promotion/afac2025)
-
 </p>
 
-**FinSight** is a multi-agent research system that automates the entire financial research process — from data collection and analysis to generating publication-ready reports with professional charts and deep insights.
+**Financial Research System** is a multi-agent research system that automates the entire financial research process — from data collection and analysis to generating publication-ready reports with professional charts and deep insights.
 
 🎯 **One ticker, one click, one comprehensive research report.**
 
@@ -57,13 +50,15 @@ https://github.com/user-attachments/assets/41963369-3dd4-4dfd-ad95-ef95cd092ebb
 - [🎨 Result Examples](#-result-examples)
 - [🏗️ Architecture](#-architecture)
 - [📖 Advanced Usage](#-advanced-usage)
-- [📊 Evaluation Results](#-evaluation-results)
-- [📜 License](#-license)
+- [📊 Reference Evaluation Results](#-reference-evaluation-results)
+- [📜 License and upstream notice](#license-and-upstream-notice)
 - [📖 Citation](#-citation)
 - [🙏 Acknowledgments](#-acknowledgments)
 
 
 ## ✨ Key Features
+
+Feature descriptions and evaluation figures inherited from the upstream research publication are reference material; local changes are documented in [docs/UPSTREAM_NOTICE.md](docs/UPSTREAM_NOTICE.md).
 
 * **📊 Professional-Grade Report Generation**
     One-click to generate 20,000+ word financial reports that rival human experts. Outperforms GPT-5 and Perplexity Deep Research in factual accuracy, analytical depth, and presentation quality.
@@ -87,7 +82,7 @@ https://github.com/user-attachments/assets/41963369-3dd4-4dfd-ad95-ef95cd092ebb
 
 ## 🗺️ Roadmap
 
-FinSight is still under development and there are many issues and room for improvement. We will continue to update. And we also sincerely welcome contributions on this open-source toolkit.
+Financial Research System is still under development and there are many issues and room for improvement. We will continue to update. And we also sincerely welcome contributions on this open-source toolkit.
 
 - [x] Multi-agent collaborative research workflow (collector → analyzer → report)
 - [x] VLM-powered chart generation + critique loops for clean visuals
@@ -115,8 +110,8 @@ FinSight is still under development and there are many issues and room for impro
 
 ```bash
 # Clone the repository
-git clone https://github.com/RUC-NLPIR/FinSight.git
-cd FinSight
+git clone <repository-url> Financial-Research-System
+cd Financial-Research-System
 
 # Install Python dependencies
 pip install -r requirements.txt
@@ -146,7 +141,7 @@ npm run build
 
 ### Configuration
 
-FinSight uses a two-layer configuration:
+Financial Research System uses a two-layer configuration:
 
 1) `.env` — model endpoints & API keys  
 ```bash
@@ -167,7 +162,7 @@ custom_collect_tasks:
   - "Stock price data and trading volume"
 ```
 
-### Run FinSight
+### Run Financial Research System
 
 **CLI (full pipeline)**
 ```bash
@@ -222,10 +217,10 @@ Full sample reports live in `assets/example_reports`.
 ## 🏗️ Architecture
 
 <p align="center">
-  <img src="assets/architecture.jpg" alt="FinSight Architecture" width="800"/>
+  <img src="assets/architecture.jpg" alt="Financial Research System Architecture" width="800"/>
 </p>
 
-FinSight is a multi-stage, memory-centric pipeline: Data Collection → Analysis + VLM chart refinement → Report drafting & polishing → Rendering. Each agent runs in a shared variable space with resumable checkpoints.
+Financial Research System is a multi-stage, memory-centric pipeline: Data Collection → Analysis + VLM chart refinement → Report drafting & polishing → Rendering. Each agent runs in a shared variable space with resumable checkpoints.
 
 **Agent roster**
 
@@ -290,7 +285,7 @@ FinSight is a multi-stage, memory-centric pipeline: Data Collection → Analysis
 
 ### Environment Variables (`.env`)
 
-FinSight requires three model types. Create a `.env` file in the project root:
+Financial Research System requires three model types. Create a `.env` file in the project root:
 
 ```bash
 # LLM (Main reasoning, code generation)
@@ -918,15 +913,6 @@ async def deep_research(query: str):
 asyncio.run(deep_research("Impact of AI on healthcare in 2024"))
 ```
 
-</details>
-
-> **📚 See [docs/advanced_usage.md](docs/advanced_usage.md)** for the complete technical reference with architecture diagrams, troubleshooting, and more examples.
-
----
-
-## 📊 Evaluation Results
-
-We conducted comprehensive evaluations comparing FinSight against leading commercial deep research systems, including **OpenAI Deep Research** and **Gemini-2.5-Pro Deep Research**. Our experiments demonstrate that FinSight significantly outperforms existing solutions, achieving a state-of-the-art overall score of **8.09**.
 
 <div align="center">
 
@@ -937,38 +923,19 @@ We conducted comprehensive evaluations comparing FinSight against leading commer
 
 </div>
 
-**Key Findings:**
-- **SOTA Performance:** FinSight achieves superior overall scores (**8.09**) compared to Gemini-2.5-Pro Deep Research (6.82) and OpenAI Deep Research (6.11).
-- **Deep Analysis:** Our **Two-Stage Writing Framework** produces reports with higher information richness and analytical depth compared to single-pass LLM searches.
-- **Expert Visualization:** The **Iterative Vision-Enhanced Mechanism** ensures publication-grade charts, achieving a visualization score of **9.00** (vs. 4.65 for OpenAI).
+## 📊 Reference Evaluation Results
+
+The upstream FinSight publication reports evaluations against leading commercial deep research systems, including **OpenAI Deep Research** and **Gemini-2.5-Pro Deep Research**, with an overall score of **8.09** for its reported setup.
+
+**Reported upstream findings:**
+- **Comparison:** The upstream setup scored **8.09** compared to Gemini-2.5-Pro Deep Research (6.82) and OpenAI Deep Research (6.11).
+- **Analysis:** Its **Two-Stage Writing Framework** was evaluated for information richness and analytical depth against single-pass LLM searches.
+- **Visualization:** Its **Iterative Vision-Enhanced Mechanism** reported a visualization score of **9.00** (vs. 4.65 for OpenAI).
 
 > 📄 For detailed experimental setup and complete results, please refer to our [paper](https://arxiv.org/abs/2510.16844).
 
 ---
 
-## 📜 License
-
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 📖 Citation
-
-If you find FinSight useful in your research, please cite our paper:
-
-```bibtex
-@article{jin2025finsight,
-  author       = {Jiajie Jin and Yuyao Zhang and Yimeng Xu and 
-                  Hongjin Qian and Yutao Zhu and Zhicheng Dou},
-  title        = {FinSight: Towards Real-World Financial Deep Research},
-  journal      = {CoRR},
-  volume       = {abs/2510.16844},
-  year         = {2025},
-  url          = {https://doi.org/10.48550/arXiv.2510.16844},
-  eprinttype   = {arXiv},
-  eprint       = {2510.16844},
-}
-```
 
 ---
 
@@ -980,3 +947,12 @@ If you find FinSight useful in your research, please cite our paper:
 
 
 
+
+
+## Persistent knowledge library
+
+This checkout includes document upload, evidence retrieval, and report citations. See [知识库使用说明](docs/KNOWLEDGE_BASE.md) for setup, configuration, testing, and limitations. Start the UI at `http://127.0.0.1:3000/#knowledge`. Knowledge integration is disabled by default for existing report configurations.
+
+## License and upstream notice
+
+This project is distributed under the GNU General Public License v3. See [LICENSE](LICENSE) and [docs/UPSTREAM_NOTICE.md](docs/UPSTREAM_NOTICE.md) for the license, derivative-work notice, and original research citation.

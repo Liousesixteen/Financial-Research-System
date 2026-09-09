@@ -10,13 +10,15 @@ from collections import defaultdict
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 
 # Add project root to path
 root = str(Path(__file__).resolve().parents[2])
 sys.path.append(root)
 
+from src.knowledge.api import KnowledgeSettings, create_router
+from src.knowledge.runtime import service_for, initialize_session
 from src.config import Config
 from src.agents import DataCollector, DataAnalyzer, ReportGenerator
 from src.memory import Memory
@@ -41,6 +43,7 @@ class SystemConfig(BaseModel):
     ds_model_name: str
     vlm_model_name: str
     embedding_model_name: str
+    knowledge_base: KnowledgeSettings = Field(default_factory=KnowledgeSettings)
 
 
 class Task(BaseModel):
@@ -112,11 +115,11 @@ class ConnectionManager:
         self.agent_logs.clear()
 
 
-app = FastAPI(title="FinSight Demo API", version="1.0.0")
+app = FastAPI(title="Financial Research System Demo API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -175,6 +178,31 @@ EXECUTION_STATE_DIR.mkdir(parents=True, exist_ok=True)
 
 # File to store last execution state
 LAST_EXECUTION_FILE = EXECUTION_STATE_DIR / "last_execution.json"
+
+
+def knowledge_service():
+    from types import SimpleNamespace
+    from src.utils.llm import AsyncLLM
+    config = current_config
+    models = {}
+    options = {}
+    if config:
+        options = config.knowledge_base.model_dump()
+        options['embedding_model'] = options.get('embedding_model') or config.embedding_model_name
+        for model in config.llm_configs:
+            if model.model_name == options['embedding_model'] and model.api_key:
+                models[model.model_name] = AsyncLLM(model.base_url, model.api_key, model.model_name)
+    return service_for(SimpleNamespace(config={'knowledge_base': options}, llm_dict=models))
+
+
+app.include_router(create_router(knowledge_service))
+
+
+@app.on_event('startup')
+async def recover_knowledge_jobs():
+    service = knowledge_service()
+    for job_id in service.recover_jobs():
+        await service.process(job_id)
 
 
 class ConfigNameRequest(BaseModel):
@@ -572,7 +600,14 @@ async def preview_report(target_name: str, filename: str):
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
     
-    return {"content": content, "filename": filename}
+    audit_path = file_path.parent / (file_path.stem + '.knowledge.json')
+    audit = {}
+    if audit_path.exists():
+        try:
+            audit = json.loads(audit_path.read_text(encoding='utf-8'))
+        except (ValueError, OSError):
+            pass
+    return {"content": content, "filename": filename, "knowledge_audit": audit}
 
 
 @app.websocket("/ws/logs")
@@ -593,6 +628,8 @@ async def run_report_generation(resume: bool = False):
     try:
         # Prepare config
         config_dict = {
+            "knowledge_base": {**current_config.knowledge_base.model_dump(),
+                               'embedding_model': current_config.knowledge_base.embedding_model or current_config.embedding_model_name},
             "output_dir": current_config.output_dir,
             "target_name": current_config.target_name,
             "target_type": "financial_company",
@@ -636,6 +673,9 @@ async def run_report_generation(resume: bool = False):
             memory.load()
             logger.info("Memory state loaded")
         
+        if not memory.knowledge_state:
+            initialize_session(memory)
+
         # Broadcast start event
         await manager.broadcast({
             "type": "execution_start",

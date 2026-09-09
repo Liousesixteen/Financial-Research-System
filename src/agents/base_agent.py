@@ -407,6 +407,9 @@ class BaseAgent:
 
         if tool_name is None:
             raise ValueError("tool_name is required")
+        from src.knowledge.runtime import only_knowledge
+        if only_knowledge(self.config):
+            return 'External tools are disabled in knowledge-only mode. Use the supplied evidence.'
         target_tool = None
         for tool in self.tools:
             if isinstance(tool, Tool):
@@ -512,6 +515,15 @@ class BaseAgent:
         current_round: int
         if prompt_function is None:
             prompt_function = self._prepare_init_prompt
+        original_prompt = prompt_function
+        async def prompt_function(data):
+            messages = await original_prompt(data)
+            from src.knowledge.runtime import evidence_context
+            query = "\n".join(str(data.get(k, '')) for k in ('task', 'analysis_task', 'section_outline', 'query'))
+            context = await evidence_context(self.memory, query)
+            if context:
+                messages.append({'role': 'user', 'content': context})
+            return messages
         if resume:
             state = await self.load(checkpoint_name=checkpoint_name)
             if state is not None:
@@ -626,7 +638,15 @@ class BaseAgent:
             return await self._handle_default_action(action_type, action_content)
     
 
+    async def _handle_knowledge_search_action(self, action_content: str):
+        from src.knowledge.runtime import evidence_context
+        context = await evidence_context(self.memory, action_content)
+        return {'action': 'knowledge_search', 'result': context or 'Knowledge library is disabled.', 'continue': True}
+
     async def _handle_code_action(self, action_content: str):
+        from src.knowledge.runtime import only_knowledge
+        if only_knowledge(self.config):
+            return {'action': 'code', 'result': 'Generated Python is disabled in knowledge-only mode. Analyze the supplied text directly.', 'continue': True}
         code_result = await self.code_executor.execute(code=action_content)
         code_result = self._format_execution_result(code_result)
         return {

@@ -21,7 +21,7 @@ export const translations = {
 
         // Landing Page
         landing: {
-            title: '玉兰·融观',
+            title: '金融研究系统',
             subtitle: 'AI 驱动的金融研究系统',
             description1: '以代码智能体和深度推理突破 AI 的局限',
             description2: '从数据到洞察 — 全自动生成专业级金融研究报告',
@@ -53,8 +53,8 @@ export const translations = {
 
         // Header
         header: {
-            title: '玉兰·融观',
-            subtitle: 'Yulan-FinSight AI System',
+            title: '金融研究系统',
+            subtitle: 'Financial Research System AI System',
             controlPanel: '控制面板'
         },
 
@@ -283,7 +283,7 @@ export const translations = {
 
         // Landing Page
         landing: {
-            title: 'Yulan-FinSight',
+            title: 'Financial Research System',
             subtitle: 'AI-Powered Financial Research System',
             description1: 'Breaking AI limitations with code agents and deep reasoning',
             description2: 'From data to insights — fully automated, publication-ready financial reports',
@@ -315,7 +315,7 @@ export const translations = {
 
         // Header
         header: {
-            title: 'Yulan-FinSight',
+            title: 'Financial Research System',
             subtitle: 'AI Financial Research System',
             controlPanel: 'Control Panel'
         },

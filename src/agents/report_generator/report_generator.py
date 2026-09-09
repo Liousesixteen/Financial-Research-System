@@ -232,10 +232,12 @@ class ReportGenerator(BaseAgent):
             target_language = self.target_language_name
         )
         
+        final_prompt += '\nPreserve all [KB:...] citation markers exactly. Do not invent new evidence IDs.'
         final_message = [{"role": "user", "content": final_prompt}]
         output = await self.llm.generate(messages = final_message)
         final_section = extract_markdown(output)
-        return final_section
+        from src.knowledge.runtime import preserve_citations
+        return preserve_citations(draft_section, final_section)
     
     async def _replace_image_path(self, report):
         """
@@ -439,6 +441,18 @@ class ReportGenerator(BaseAgent):
         """
         Append the reference-data section and replace placeholder citations.
         """
+        from src.knowledge.runtime import settings, resolve_references
+        if settings(self.config)['enabled']:
+            import json
+            evidence = self.memory.knowledge_state.get('evidence', {})
+            text, audit = resolve_references(report, evidence, self.memory.get_collect_data())
+            section = Section('Reference Data Sources', text)
+            section.set_content(text or 'No verified citations.')
+            report.sections.append(section)
+            from pathlib import Path
+            Path(self.config.working_dir, f'{report.title}.knowledge.json').write_text(
+                json.dumps({'citations': audit, 'evidence': evidence}, ensure_ascii=False, indent=2), encoding='utf-8')
+            return report
         collect_data_list = self.memory.get_collect_data() # only use data, without analysis result
         all_data = []
         for item in collect_data_list:
@@ -788,6 +802,10 @@ class ReportGenerator(BaseAgent):
         Phase 1: per-section drafting
         Phase 2: post processing
         """
+        from src.knowledge.runtime import only_knowledge
+        if only_knowledge(self.config):
+            enable_chart = False
+
         # Initialize/restore stage state
         report = None
         start_index = 0

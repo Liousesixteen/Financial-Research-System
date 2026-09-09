@@ -80,3 +80,7 @@ venv/
 .venv/
 ENV/
 evaluations/
+
+# Knowledge originals/indexes and verification environment
+data/knowledge/
+.venv-kb/

@@ -11,7 +11,8 @@ import {
     Modal,
     Spin,
     Tooltip,
-    Divider
+    Divider,
+    Collapse
 } from 'antd'
 import {
     FileTextOutlined,
@@ -35,6 +36,7 @@ function ReportsPage() {
     const [loading, setLoading] = useState(false)
     const [previewVisible, setPreviewVisible] = useState(false)
     const [previewContent, setPreviewContent] = useState('')
+    const [knowledgeAudit, setKnowledgeAudit] = useState({})
     const [previewTitle, setPreviewTitle] = useState('')
     const [previewLoading, setPreviewLoading] = useState(false)
     const { t, language } = useLanguage()
@@ -68,12 +70,14 @@ function ReportsPage() {
         }
 
         setPreviewLoading(true)
+        setKnowledgeAudit({})
         setPreviewVisible(true)
         setPreviewTitle(record.filename)
 
         try {
             const response = await getReportPreview(record.target_name, record.filename)
             setPreviewContent(response.data.content)
+            setKnowledgeAudit(response.data.knowledge_audit || {})
         } catch (error) {
             console.error('Failed to load preview:', error)
             message.error(t('reports.messages.previewFailed'))
@@ -339,6 +343,14 @@ function ReportsPage() {
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {previewContent}
                         </ReactMarkdown>
+                        {knowledgeAudit.citations?.length > 0 && <>
+                            <Divider>{language === 'zh' ? '引用证据 · 本次研究快照' : 'Citation evidence · research snapshot'}</Divider>
+                            <Collapse items={knowledgeAudit.citations.map((citation, index) => {
+                                const evidence = knowledgeAudit.evidence?.[citation.id?.replace(/^KB:/, '')]
+                                return { key: index, label: `${citation.number ? '[' + citation.number + '] ' : ''}${citation.source || citation.label || citation.id} — ${citation.status}`,
+                                    children: evidence ? <><Text type="secondary">{evidence.locator} · {evidence.metadata?.published_at}</Text><p style={{ whiteSpace: 'pre-wrap' }}>{evidence.text}</p><Text code>{evidence.version}</Text></> : <Text type="secondary">{language === 'zh' ? '没有可展示的知识库原文快照。' : 'No knowledge excerpt snapshot available.'}</Text> }
+                            })} />
+                        </>}
                     </div>
                 )}
             </Modal>

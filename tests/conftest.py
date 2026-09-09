@@ -1,4 +1,4 @@
-"""Shared fixtures for the FinSight test suite."""
+"""Shared fixtures for the Financial Research System test suite."""
 
 import asyncio
 

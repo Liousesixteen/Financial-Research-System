@@ -3,7 +3,7 @@ stock_code: ""
 target_type: 'financial_industry'  # financial_company, macro, industry, general
 output_dir: "./outputs/exp-v3"
 language: 'zh' # zh,en
-reference_doc_path: 'src/template/report_template_yulan.docx' # used for docx style
+reference_doc_path: 'src/template/report_template_financial_research_system.docx' # used for docx style
 outline_template_path: 'src/template/industry_outline_zh.md' # used for outline style
 
 custom_collect_tasks:
