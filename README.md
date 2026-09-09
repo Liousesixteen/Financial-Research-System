@@ -78,10 +78,10 @@ flowchart LR
 ## 🏗️ 系统架构
 
 <p align="center">
-  <img src="assets/architecture.jpg" width="94%" alt="Financial Research System Architecture" />
+  <img src="assets/system-architecture.svg" width="100%" alt="Financial Research System Current Architecture" />
 </p>
 
-> 上图展示基础研报流水线。当前版本在此基础上增加了知识库 API、混合检索、Agent 证据注入、稳定引用、任务快照和前端资料管理。
+架构图依据当前代码绘制，覆盖 Web 与 CLI 入口、FastAPI 服务、异步优先级编排、Agent 执行层、共享工具与状态，以及知识库证据审计和多格式报告交付。
 
 ### Agent 分工
 
