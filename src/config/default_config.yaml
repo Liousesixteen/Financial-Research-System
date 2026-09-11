@@ -40,3 +40,15 @@ knowledge_base:
   top_k: 8
   vector_backend: local
   qdrant_url: http://localhost:6333
+
+# Durable Agent orchestration. Set engine: legacy to use the previous priority scheduler.
+workflow:
+  engine: langgraph
+  max_iterations: 20
+  max_generated_tasks: 5
+  generate_tasks: true
+  min_initial_evidence: 3
+  max_retrieval_queries: 4
+  max_retrieval_rounds: 1
+  fail_fast: false
+  checkpoint_db: ''

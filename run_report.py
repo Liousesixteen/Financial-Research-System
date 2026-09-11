@@ -20,7 +20,7 @@ IF_RESUME = True
 MAX_CONCURRENT = 3
 
 
-async def run_report(resume: bool = True, max_concurrent: int = None, config_path: str = "my_config.yaml"):
+async def _run_report_legacy(resume: bool = True, max_concurrent: int = None, config_path: str = "my_config.yaml"):
     """
     Run report generation with optional concurrency limit.
     
@@ -265,11 +265,42 @@ async def run_report(resume: bool = True, max_concurrent: int = None, config_pat
     logger.info("All tasks completed")
 
 
+async def run_report(
+    resume: bool = True,
+    max_concurrent: int = None,
+    config_path: str = "my_config.yaml",
+    engine: str | None = None,
+):
+    """Run the report with LangGraph, with the previous scheduler as a fallback."""
+    if engine == "legacy":
+        return await _run_report_legacy(resume=resume, max_concurrent=max_concurrent, config_path=config_path)
+
+    config = Config(config_file_path=config_path, config_dict={})
+    selected_engine = engine or config.config.get("workflow", {}).get("engine", "langgraph")
+    if selected_engine == "legacy":
+        return await _run_report_legacy(resume=resume, max_concurrent=max_concurrent, config_path=config_path)
+    if selected_engine != "langgraph":
+        raise ValueError("workflow.engine must be 'langgraph' or 'legacy'")
+
+    log_dir = os.path.join(config.working_dir, "logs")
+    setup_logger(log_dir=log_dir, log_level=logging.INFO)
+    from src.workflow import run_research_graph
+
+    return await run_research_graph(
+        config,
+        resume=resume,
+        max_concurrent=max_concurrent,
+        config_path=config_path,
+    )
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a Financial Research System research report')
     parser.add_argument('--config', default='my_config.yaml')
     parser.add_argument('--fresh', action='store_true', help='Start fresh instead of resuming an old snapshot')
     parser.add_argument('--max-concurrent', type=int, default=MAX_CONCURRENT)
+    parser.add_argument('--engine', choices=('langgraph', 'legacy'), default=None,
+                        help='Workflow engine; defaults to workflow.engine in the YAML config')
     args = parser.parse_args()
-    asyncio.run(run_report(resume=IF_RESUME and not args.fresh, max_concurrent=args.max_concurrent, config_path=args.config))
-
+    asyncio.run(run_report(resume=IF_RESUME and not args.fresh, max_concurrent=args.max_concurrent,
+                           config_path=args.config, engine=args.engine))

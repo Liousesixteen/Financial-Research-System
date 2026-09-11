@@ -44,14 +44,14 @@ Financial Research System 是一个面向金融研究场景的异步多 Agent �
 
 | 能力 | 实现方式 | 产生的结果 |
 | --- | --- | --- |
-| 自动化研究流水线 | `DataCollector → DataAnalyzer → ReportGenerator` 分阶段执行，同阶段任务受信号量控制并发 | 从研究问题到完整报告 |
+| 自动化研究流水线 | LangGraph 编排 `规划 → 检索 → 采集 → 分析 → 报告 → 审计`，同阶段 Agent 受信号量控制并发 | 可恢复、可观测的完整研报任务 |
 | 金融数据采集 | 集成 AkShare、efinance、yfinance、FRED 等数据工具 | 行情、财务、宏观与行业数据 |
 | 联网深度检索 | 支持 Serper、Bing、Bocha，以及 Playwright、Crawl4AI 和 PDF 解析 | 新闻、公告、网页与文档资料 |
 | 数据分析与绘图 | LLM 生成分析代码，受限执行器限制导入、写入目录与执行时间 | 指标分析、表格和可视化图表 |
 | 知识库入库 | PDF、DOCX、MD、TXT 解析，内容哈希去重、版本与状态管理 | 可管理、可检索的研究资料库 |
 | 混合检索 | SQLite FTS5 关键词召回 + 本地向量或 Qdrant + RRF 融合 | 兼顾中文关键词与语义相关性 |
 | 证据链 | 稳定证据编号、精确引用解析、研究快照、`.knowledge.json` 审计文件 | 报告结论可定位到原始证据 |
-| 断点恢复 | `VariableMemory` 持久化任务、数据、依赖、日志与知识快照 | 长任务失败后可继续执行 |
+| 双层断点恢复 | LangGraph SQLite Checkpointer 保存图状态，`VariableMemory` 保存 Agent、数据、日志与知识快照 | 工作流与 Agent 均可恢复 |
 | 可视化管理 | React + Ant Design 管理配置、任务、日志、报告与知识库 | 浏览器内完成主要操作 |
 | 多格式交付 | Markdown 原稿，经 Pandoc/docx2pdf 转换 | Markdown、DOCX、PDF 报告 |
 
@@ -59,8 +59,9 @@ Financial Research System 是一个面向金融研究场景的异步多 Agent �
 
 ```mermaid
 flowchart LR
-    U[研究主题与配置] --> O[异步任务编排]
-    O --> C[DataCollector<br/>数据与资料采集]
+    U[研究主题与配置] --> O[LangGraph 状态工作流]
+    O --> P0[任务规划与知识库预检索]
+    P0 --> C[DataCollector<br/>数据与资料采集]
     C --> M[(VariableMemory)]
     M --> A[DataAnalyzer<br/>分析与图表生成]
     A --> M
@@ -73,7 +74,7 @@ flowchart LR
     P --> AUDIT[Knowledge Audit JSON]
 ```
 
-系统按任务优先级依次推进：优先级 1 负责采集，优先级 2 负责分析，优先级 3 负责报告生成；同一优先级中的任务可并发运行。任务结果统一写入 Variable Memory，后续 Agent 根据显式依赖读取数据，减少上下文重复传递。
+系统由 LangGraph 按依赖推进初始化、任务规划、知识库预检索、数据采集、分析、报告生成和引用审计。采集与分析阶段内部并发执行多个 Agent；图状态只保存任务、Agent ID、证据 ID 和产物路径，大型 DataFrame 与文档留在 Variable Memory 和文件层。
 
 ## 🏗️ 系统架构
 
@@ -81,7 +82,7 @@ flowchart LR
   <img src="assets/system-architecture.svg" width="100%" alt="Financial Research System Current Architecture" />
 </p>
 
-架构图依据当前代码绘制，覆盖 Web 与 CLI 入口、FastAPI 服务、异步优先级编排、Agent 执行层、共享工具与状态，以及知识库证据审计和多格式报告交付。
+架构图依据当前代码绘制，覆盖 Web 与 CLI 入口、LangGraph 工作流、Agent 执行层、共享工具与状态，以及知识库证据审计和多格式报告交付。
 
 ### Agent 分工
 
@@ -92,7 +93,7 @@ flowchart LR
 | `DataAnalyzer` | 根据已有数据编写和执行分析代码，产出结论与图表 | pandas、NumPy、Matplotlib、受限 Python 执行器 |
 | `ReportGenerator` | 生成大纲与章节，整合分析结果，处理引用与格式 | Variable Memory、知识证据、VLM、模板 |
 
-项目采用自研 `BaseAgent` 和 Agent Loop，没有依赖 LangChain、LangGraph、CrewAI 或 AutoGen。工具通过注册机制暴露给 Agent，模型通过 OpenAI-compatible API 接入，可分别配置文本模型、视觉模型和 Embedding 模型。
+项目使用 LangGraph 管理跨 Agent 状态、节点依赖和 SQLite Checkpoint，同时保留自研 `BaseAgent` Agent Loop 作为节点执行单元。知识库通过自定义 LangChain `BaseRetriever` 输出标准 `Document`，并保留稳定证据 ID、任务快照和引用审计语义。工具通过注册机制暴露给 Agent，模型通过 OpenAI-compatible API 接入。
 
 ## 📚 知识库与证据链
 
@@ -223,6 +224,8 @@ python run_report.py --config my_config.yaml --fresh
 
 `--fresh` 会创建新的研究与证据快照；省略后，系统会尝试从已有检查点恢复。
 
+默认使用 LangGraph；需要对照旧调度器时可运行 `python run_report.py --engine legacy`。图级检查点默认写入当前研究目录的 `workflow_checkpoints.sqlite3`。
+
 ## ⚙️ 知识库配置示例
 
 在研究 YAML 中加入以下配置：
@@ -241,6 +244,16 @@ knowledge_base:
   filters:
     ticker: "600001"
     market: "A"
+
+workflow:
+  engine: langgraph
+  max_iterations: 20
+  max_generated_tasks: 5
+  generate_tasks: true
+  min_initial_evidence: 3
+  max_retrieval_queries: 4
+  max_retrieval_rounds: 1
+  fail_fast: false
 ```
 
 知识库也提供独立服务，不配置生成模型即可体验资料管理与关键词检索：
@@ -268,12 +281,12 @@ docker compose -f compose.knowledge.yaml up -d
 
 | 层次 | 技术 |
 | --- | --- |
-| Agent 与编排 | Python、asyncio、自研 BaseAgent、工具注册、优先级任务流、Checkpoint |
+| Agent 与编排 | LangGraph、Python、asyncio、自研 BaseAgent、工具注册、SQLite Checkpointer |
 | 模型接入 | OpenAI Python SDK、OpenAI-compatible API、文本模型、VLM、Embedding |
 | 数据分析 | pandas、NumPy、Matplotlib、Seaborn |
 | 金融与检索 | AkShare、efinance、yfinance、FRED、Serper、Bing、Bocha |
 | 网页与文档 | Playwright、Crawl4AI、BeautifulSoup、pdfplumber、python-docx |
-| RAG 与存储 | SQLite、FTS5、jieba、本地向量检索、Qdrant、RRF |
+| RAG 与存储 | LangChain Retriever、SQLite、FTS5、jieba、本地向量检索、Qdrant、RRF |
 | 后端 | FastAPI、Uvicorn、Pydantic、WebSocket |
 | 前端 | React 18、Vite 5、Ant Design、React Router、Axios、React Markdown |
 | 测试 | pytest、pytest-asyncio、Hypothesis、httpx |
@@ -289,6 +302,7 @@ Financial-Research-System/
 │   ├── tools/                    # 金融、搜索、抓取、代码执行工具
 │   ├── memory/                   # Variable Memory 与任务恢复
 │   ├── knowledge/                # 入库、检索、API、Agent 证据接入
+│   ├── workflow/                 # LangGraph 研究状态图与持久化执行
 │   ├── config/                   # 模型与研究任务配置
 │   └── template/                 # 公司、行业研报模板
 ├── demo/
@@ -325,6 +339,7 @@ npm run build --prefix demo/frontend
 | 文档 | 内容 |
 | --- | --- |
 | [知识库使用说明](docs/KNOWLEDGE_BASE.md) | 安装、入库、检索、Agent 接入、审计与边界 |
+| [LangGraph 与 Agentic RAG](docs/LANGGRAPH_AGENTIC_RAG.md) | 状态图、Retriever、恢复机制与扩展方式 |
 | [高级用法](docs/ADVANCED_USAGE.md) | 自定义 Agent、工具、数据与报告流程 |
 
 ## ⚠️ 使用边界

@@ -203,9 +203,11 @@ export const translations = {
                 error: '错误'
             },
             phases: {
+                0: '任务规划与证据检索',
                 1: '数据收集阶段',
                 2: '数据分析阶段',
-                3: '报告生成阶段'
+                3: '报告生成阶段',
+                4: '引用审计阶段'
             },
             agentTypes: {
                 data_collector: '数据收集',
@@ -465,9 +467,11 @@ export const translations = {
                 error: 'Error'
             },
             phases: {
+                0: 'Planning and Evidence Retrieval',
                 1: 'Data Collection Phase',
                 2: 'Data Analysis Phase',
-                3: 'Report Generation Phase'
+                3: 'Report Generation Phase',
+                4: 'Citation Audit Phase'
             },
             agentTypes: {
                 data_collector: 'Data Collector',
@@ -523,4 +527,3 @@ export const translations = {
         }
     }
 }
-

@@ -624,6 +624,127 @@ async def websocket_logs(websocket: WebSocket):
         manager.disconnect(websocket)
 
 async def run_report_generation(resume: bool = False):
+    """Run the same durable LangGraph workflow used by the CLI."""
+    logger = get_logger()
+    try:
+        config_dict = {
+            "knowledge_base": {
+                **current_config.knowledge_base.model_dump(),
+                "embedding_model": current_config.knowledge_base.embedding_model or current_config.embedding_model_name,
+            },
+            "workflow": {
+                "engine": "langgraph",
+                "generate_tasks": False,
+                "max_iterations": 5,
+                "fail_fast": False,
+            },
+            "custom_collect_tasks": [task.content for task in current_tasks.collect_tasks],
+            "custom_analysis_tasks": [task.content for task in current_tasks.analysis_tasks],
+            "output_dir": current_config.output_dir,
+            "target_name": current_config.target_name,
+            "target_type": "financial_company",
+            "stock_code": current_config.stock_code,
+            "reference_doc_path": current_config.reference_doc_path,
+            "outline_template_path": current_config.outline_template_path,
+            "llm_config_list": [
+                {
+                    "model_name": llm.model_name,
+                    "api_key": llm.api_key,
+                    "base_url": llm.base_url,
+                    "generation_params": llm.generation_params or {},
+                }
+                for llm in current_config.llm_configs
+            ],
+        }
+        config = Config(config_dict=config_dict)
+        logger = setup_logger(log_dir=os.path.join(config.working_dir, "logs"), log_level=logging.INFO)
+        if not any(isinstance(handler, WebSocketLogHandler) for handler in logger.logger.handlers):
+            ws_handler = WebSocketLogHandler(manager)
+            ws_handler.setLevel(logging.INFO)
+            from src.utils.logger import AgentContextFilter
+            ws_handler.setFormatter(logging.Formatter(
+                "%(asctime)s [%(levelname)s] [%(agent_name)s:%(agent_id)s] %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            ))
+            ws_handler.addFilter(AgentContextFilter())
+            logger.addHandler(ws_handler)
+
+        await manager.broadcast({"type": "execution_start", "timestamp": datetime.now().isoformat()})
+
+        phase_priority = {
+            "initialize": 0,
+            "plan": 0,
+            "retrieve": 0,
+            "assess_evidence": 0,
+            "expand_retrieval": 0,
+            "collect": 1,
+            "analyze": 2,
+            "report": 3,
+            "audit": 4,
+        }
+
+        async def graph_status(event: Dict[str, Any]):
+            name = event["event"]
+            phase = event.get("phase", "")
+            priority = phase_priority.get(phase, execution_state.get("current_priority"))
+            if name == "phase_start":
+                if not execution_state["is_running"]:
+                    raise RuntimeError("Execution stopped by user")
+                execution_state["current_priority"] = priority
+                await manager.broadcast({"type": "priority_start", "priority": priority, "phase": phase,
+                                         "timestamp": datetime.now().isoformat()})
+                return
+            if name == "phase_complete":
+                await manager.broadcast({"type": "priority_complete", "priority": priority, "phase": phase,
+                                         "timestamp": datetime.now().isoformat()})
+                return
+            if name == "agent_start":
+                status = AgentStatus(
+                    agent_id=event["agent_id"],
+                    agent_type=event["agent_type"],
+                    task_content=event.get("task", ""),
+                    status="running",
+                    priority=priority or 0,
+                )
+                existing = next((item for item in execution_state["agents"] if item["agent_id"] == status.agent_id), None)
+                if existing is None:
+                    execution_state["agents"].append(status.model_dump())
+                    await manager.broadcast({"type": "agents_initialized", "agents": execution_state["agents"],
+                                             "timestamp": datetime.now().isoformat()})
+                else:
+                    await update_agent_status(status)
+                return
+            if name in {"agent_complete", "agent_skipped", "agent_error"}:
+                existing = next((item for item in execution_state["agents"] if item["agent_id"] == event["agent_id"]), None)
+                if existing:
+                    status = AgentStatus(**existing)
+                    status.status = "error" if name == "agent_error" else "completed"
+                    status.progress = event.get("error", "")
+                    await update_agent_status(status)
+
+        from src.workflow import run_research_graph
+        result = await run_research_graph(
+            config,
+            resume=resume,
+            max_concurrent=3,
+            status_callback=graph_status,
+        )
+        execution_state["is_running"] = False
+        execution_state["current_priority"] = None
+        await manager.broadcast({
+            "type": "execution_complete",
+            "status": result.get("status"),
+            "metrics": result.get("metrics", {}),
+            "timestamp": datetime.now().isoformat(),
+        })
+    except Exception as exc:
+        logger.error(f"Execution error: {exc}", exc_info=True)
+        execution_state["is_running"] = False
+        execution_state["current_priority"] = None
+        await manager.broadcast({"type": "execution_error", "error": str(exc), "timestamp": datetime.now().isoformat()})
+
+
+async def _run_report_generation_legacy(resume: bool = False):
     """Main report generation logic"""
     try:
         # Prepare config
@@ -907,4 +1028,3 @@ if __name__ == "__main__":
         reload=True,
         log_level="info"
     )
-

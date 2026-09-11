@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
   <title id="title">Financial Research System 系统架构</title>
-  <desc id="desc">展示 Web 与命令行入口、FastAPI 服务、异步任务编排、四类 Agent、工具系统、知识库、模型网关、变量记忆以及报告和证据审计输出。</desc>
+  <desc id="desc">展示 Web 与命令行入口、FastAPI 服务、LangGraph 状态工作流、四类 Agent、工具系统、知识库、模型网关、变量记忆以及报告和证据审计输出。</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#F7F9FF"/>
@@ -97,22 +97,22 @@
     <rect x="48" y="324" width="1504" height="126" rx="20" fill="url(#orchestrator)" stroke="#93C5FD" stroke-width="1.5"/>
   </g>
   <circle cx="88" cy="362" r="20" fill="#2563EB"/><text x="88" y="366" class="number" text-anchor="middle">02</text>
-  <text x="120" y="362" class="card-title">Async Research Orchestrator</text>
-  <text x="120" y="387" class="body">根据自定义任务与 LLM 动态任务构建执行计划，按优先级分层推进，并在同层内并发执行。</text>
+  <text x="120" y="362" class="card-title">LangGraph Research Workflow</text>
+  <text x="120" y="387" class="body">以持久状态图推进规划、检索、采集、分析、报告与审计，并在采集/分析节点内并发执行。</text>
   <g transform="translate(120,404)">
-    <rect width="230" height="28" rx="14" fill="#DBEAFE"/><text x="115" y="19" class="pill" text-anchor="middle">① Collect · Priority 1</text>
+    <rect width="230" height="28" rx="14" fill="#DBEAFE"/><text x="115" y="19" class="pill" text-anchor="middle">① Plan + Retrieve</text>
     <path d="M240 14 H274" class="line" stroke="#60A5FA" stroke-width="2" marker-end="url(#arrow-blue)"/>
-    <rect x="286" width="230" height="28" rx="14" fill="#E0E7FF"/><text x="401" y="19" class="pill" text-anchor="middle">② Analyze · Priority 2</text>
+    <rect x="286" width="230" height="28" rx="14" fill="#E0E7FF"/><text x="401" y="19" class="pill" text-anchor="middle">② Collect + Analyze</text>
     <path d="M526 14 H560" class="line" stroke="#60A5FA" stroke-width="2" marker-end="url(#arrow-blue)"/>
-    <rect x="572" width="230" height="28" rx="14" fill="#CCFBF1"/><text x="687" y="19" class="pill" text-anchor="middle">③ Report · Priority 3</text>
+    <rect x="572" width="230" height="28" rx="14" fill="#CCFBF1"/><text x="687" y="19" class="pill" text-anchor="middle">③ Report + Audit</text>
   </g>
   <g transform="translate(1030,346)">
     <rect width="145" height="31" rx="15.5" fill="#FFFFFF" stroke="#BFDBFE"/><text x="72.5" y="20" class="pill" text-anchor="middle">asyncio.Semaphore</text>
     <rect x="158" width="130" height="31" rx="15.5" fill="#FFFFFF" stroke="#BFDBFE"/><text x="223" y="20" class="pill" text-anchor="middle">Task Mapping</text>
-    <rect x="301" width="157" height="31" rx="15.5" fill="#FFFFFF" stroke="#A7F3D0"/><text x="379.5" y="20" class="pill" text-anchor="middle">Checkpoint / Resume</text>
+    <rect x="301" width="157" height="31" rx="15.5" fill="#FFFFFF" stroke="#A7F3D0"/><text x="379.5" y="20" class="pill" text-anchor="middle">SQLite Checkpointer</text>
     <rect y="45" width="145" height="31" rx="15.5" fill="#FFFFFF" stroke="#BFDBFE"/><text x="72.5" y="65" class="pill" text-anchor="middle">动态任务生成</text>
-    <rect x="158" y="45" width="130" height="31" rx="15.5" fill="#FFFFFF" stroke="#BFDBFE"/><text x="223" y="65" class="pill" text-anchor="middle">依赖解析</text>
-    <rect x="301" y="45" width="157" height="31" rx="15.5" fill="#FFFFFF" stroke="#A7F3D0"/><text x="379.5" y="65" class="pill" text-anchor="middle">失败隔离与持久化</text>
+    <rect x="158" y="45" width="130" height="31" rx="15.5" fill="#FFFFFF" stroke="#BFDBFE"/><text x="223" y="65" class="pill" text-anchor="middle">LangChain Retriever</text>
+    <rect x="301" y="45" width="157" height="31" rx="15.5" fill="#FFFFFF" stroke="#A7F3D0"/><text x="379.5" y="65" class="pill" text-anchor="middle">状态事件与失败隔离</text>
   </g>
 
   <path d="M800 450 V481" class="line" stroke="#3B82F6" stroke-width="3" marker-end="url(#arrow-blue)"/>

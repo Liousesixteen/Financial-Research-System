@@ -102,13 +102,13 @@ docker compose -f compose.knowledge.yaml up -d
 
 ## 5. 测试与已知边界
 
-本次已通过 101 项自动测试：21 项知识库/接入测试，以及 80 项原有记忆、异步桥接、LLM 响应解析与重试、工具、日期、限流、执行器测试。Qdrant 适配使用官方客户端的本地内存引擎测试，尝试启动 Docker 服务时，本机 Docker/OrbStack 引擎未运行（docker.sock 不存在），尚未完成容器部署验收。前端 `npm run build` 通过，仍有上游前端包体较大的构建提示。
+当前离线回归集已通过 106 项自动测试，覆盖知识库、LangChain Retriever、LangGraph 状态图与 SQLite Checkpoint，以及原有记忆、异步桥接、LLM 响应解析与重试、工具、日期、限流和执行器。Qdrant 适配使用官方客户端的本地内存引擎测试，尝试启动 Docker 服务时，本机 Docker/OrbStack 引擎未运行（docker.sock 不存在），尚未完成容器部署验收。前端 `npm run build` 通过，仍有包体较大的构建提示。
 
 测试命令：
 
 ```bash
 CRAWL4_AI_BASE_DIRECTORY=/tmp/financial-research-system-crawl MPLCONFIGDIR=/tmp/financial-research-system-mpl \
-.venv-kb/bin/python -m pytest tests/knowledge tests/test_memory.py tests/test_async_bridge.py \
+.venv-kb/bin/python -m pytest tests/knowledge tests/workflow tests/test_memory.py tests/test_async_bridge.py \
   tests/test_parse_llm.py tests/test_llm_retry.py tests/test_tool_base.py tests/test_tool_registry.py \
   tests/test_dynamic_date.py tests/test_rate_limiter.py tests/test_sandbox.py -q
 npm run build --prefix demo/frontend

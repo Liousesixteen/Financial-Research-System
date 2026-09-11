@@ -38,3 +38,8 @@ python-multipart
 # Knowledge library routes use Pydantic v2 and optional Qdrant
 pydantic>=2.7,<3
 qdrant-client>=1.19,<1.20
+
+# Agent workflow and standard retriever interfaces
+langgraph>=1.0,<2
+langchain-core>=1.0,<2
+langgraph-checkpoint-sqlite>=3.0,<4
