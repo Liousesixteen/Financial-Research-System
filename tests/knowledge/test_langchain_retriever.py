@@ -51,3 +51,40 @@ def test_langchain_retriever_is_disabled_with_knowledge_base(tmp_path):
     config = SimpleNamespace(config={"knowledge_base": {"enabled": False}}, llm_dict={})
     memory = SimpleNamespace(config=config, knowledge_state={}, save=lambda: None)
     assert retriever_for(memory) is None
+
+
+@pytest.mark.asyncio
+async def test_agent_retriever_uses_qdrant_for_frozen_evidence(tmp_path, monkeypatch):
+    from qdrant_client import QdrantClient, models
+    client = QdrantClient(':memory:')
+    client.create_collection('test', vectors_config=models.VectorParams(size=2, distance=models.Distance.COSINE))
+    monkeypatch.setattr(client, 'close', lambda: None)
+    monkeypatch.setattr(KnowledgeBaseService, '_qdrant', lambda self, dimension: (client, 'test'))
+    queries = []
+    original_query = KnowledgeBaseService._qdrant_query
+    def observed_query(self, rows, vector, limit):
+        queries.append(len(rows))
+        return original_query(self, rows, vector, limit)
+    monkeypatch.setattr(KnowledgeBaseService, '_qdrant_query', observed_query)
+
+    service = KnowledgeBaseService(tmp_path / 'kb')
+    library = service.create_library('annual reports')['id']
+    upload = service.enqueue(library, 'report.txt', b'operating margin rose')
+    await service.process(upload['job_id'])
+
+    class Embedding:
+        async def generate_embeddings(self, texts):
+            return [[1.0, float('margin' in text)] for text in texts]
+    config = SimpleNamespace(config={'knowledge_base': {
+        'enabled': True, 'kb_ids': [library], 'storage_dir': str(tmp_path / 'kb'),
+        'vector_backend': 'qdrant', 'embedding_model': 'test', 'require_semantic': True,
+    }}, llm_dict={'test': Embedding()})
+    memory = SimpleNamespace(config=config, knowledge_state={}, save=lambda: None)
+    initialize_session(memory)
+    documents = await retriever_for(memory).ainvoke('margin')
+    assert queries == [1]
+    assert documents[0].metadata['retrieval_mode'] == 'hybrid'
+    assert documents[0].metadata['evidence_id'] in memory.knowledge_state['evidence']
+
+    service.delete_document(upload['doc_id'])
+    assert (await retriever_for(memory).ainvoke('margin'))[0].metadata['document_id'] == upload['doc_id']

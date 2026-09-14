@@ -1,0 +1,2 @@
+# Optional local Cross-Encoder reranking. Install with requirements-knowledge.txt.
+sentence-transformers>=3,<7

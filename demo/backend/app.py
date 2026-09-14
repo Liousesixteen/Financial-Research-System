@@ -195,7 +195,17 @@ def knowledge_service():
     return service_for(SimpleNamespace(config={'knowledge_base': options}, llm_dict=models))
 
 
-app.include_router(create_router(knowledge_service))
+def knowledge_answer_model():
+    if current_config is None:
+        return None
+    from src.utils.llm import AsyncLLM
+    for model in current_config.llm_configs:
+        if model.model_name == current_config.ds_model_name and model.api_key:
+            return AsyncLLM(model.base_url, model.api_key, model.model_name, model.generation_params)
+    return None
+
+
+app.include_router(create_router(knowledge_service, knowledge_answer_model))
 
 
 @app.on_event('startup')

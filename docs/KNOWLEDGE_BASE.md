@@ -84,7 +84,7 @@ knowledge_base:
 
 默认原件、SQLite、FTS5 和 Embedding 缓存位于项目根目录 `data/knowledge/`，已加入 Git 忽略。备份时停止写入后备份整个目录，并保留需要审计的报告输出目录。设置 `FRS_KB_DIR` 可以切换存储位置，CLI 与 Web 必须指向同一目录。
 
-无 Embedding 配置时使用中文二元词组 + jieba/英文词项的关键词检索。有模型时使用关键词、语义两路召回与 RRF 融合，保留来源多样性；Embedding 失败的检索会显式降级。入库时若已配置的 Embedding 失败，任务标记失败，可重试，也可暂移除该配置后重新索引。
+无 Embedding 配置时使用中文二元词组 + jieba/英文词项的关键词检索。有模型时使用关键词、语义两路召回与 RRF 融合，保留来源多样性；Embedding 失败的检索会显式降级。设置 `require_semantic: true` 后，语义检索不可用会直接报错，不会悄悄退化为关键词检索。入库时若已配置的 Embedding 失败，任务标记失败，可重试，也可暂移除该配置后重新索引。
 
 本地后端使用归一化向量精确计算。首版面向单机小规模资料，尚未做 100–500 文档的性能基准；语义查询首次遇到未嵌入的片段时会构建缓存，可能耗时较长。任务快照当前保存筛选后原文，因此大型库会增加检查点体积。
 
@@ -96,13 +96,53 @@ docker compose -f compose.knowledge.yaml up -d
 
 然后在系统配置中选择 Qdrant，URL 为 `http://localhost:6333`，并设置有效 Embedding 模型。容器版本固定为 1.19.0，与本次验证的 qdrant-client 1.19.x 对齐。容器只绑定本机地址。
 
-在线查询会按当前允许的片段 ID 过滤 Qdrant 结果，再检查 SQLite 状态。任务快照检索使用本地精确计算，避免文档删除/修订破坏历史研究。Embedding 缓存区分内容哈希、模型名称、服务地址及显式 embedding_version；模型改变维度或输出含义时应提升版本并重新索引。
+在线查询会按当前允许的片段 ID 过滤 Qdrant 结果，再检查 SQLite 状态。研报任务快照现在也使用 Qdrant 检索，按照冻结的片段 ID 限定候选范围；历史资料即使从在线库删除，也保留其向量和快照以供恢复与审计。此前入库但尚未写入 Qdrant 的片段会在检索时补建索引。Embedding 缓存区分内容哈希、模型名称、服务地址及显式 embedding_version；模型改变维度或输出含义时应提升版本并重新索引。
 
 删除后的 Qdrant 点目前通过主库状态及候选 ID 集合排除，未做物理垃圾回收；重建集合时可清理。SQLite 与原件是主数据，Qdrant 索引可重建。
 
+### 推荐的完整 RAG 配置
+
+已配置可用的 Embedding 模型后，在完整研报服务的系统配置中启用知识库、选择资料库与 `Qdrant`，并启用“要求语义检索可用”。可选的 Cross-Encoder 模型用于对 FTS5 与 Qdrant 融合后的候选片段精排。Reranker 首次使用需要下载模型文件，部署环境应提前缓存模型；未安装依赖或加载失败时，默认保留 RRF 排序并返回警告。
+
+```bash
+.venv-kb/bin/python -m pip install -r requirements-reranker.txt
+docker compose -f compose.knowledge.yaml up -d
+```
+
+```yaml
+knowledge_base:
+  enabled: true
+  kb_ids: ['你的资料库 ID']
+  vector_backend: qdrant
+  qdrant_url: http://localhost:6333
+  embedding_model: '与 llm_config_list 对应的 Embedding 模型名称'
+  embedding_version: '1'
+  reranker_model: 'BAAI/bge-reranker-v2-m3'
+  require_semantic: true
+  top_k: 8
+```
+
+实际链路为：解析和定位 → 切片 → Embedding 缓存与 Qdrant 索引 → 按资料范围/截止日期筛选 → FTS5 与 Qdrant 召回 → RRF 融合 → 可选 Cross-Encoder 精排 → Agent 生成并保留 `[KB:证据ID]` → 报告引用审计。`reranker_model` 为空时不执行精排。独立知识库服务仍是无需模型凭据的关键词体验版；完整链路请启动完整研报服务。
+
+完整研报服务还提供 `POST /api/knowledge/answer`，页面中的“据证据回答”调用此接口，使用系统配置里的生成模型在召回证据上回答问题，并返回引用、原文和检索警告。若未配置生成模型，接口返回 503；无证据时直接说明无法回答。若模型没有输出有效的 `[KB:证据ID]` 或使用了不存在的编号，接口只展示“未生成可核验引用”，并保留检索原文供核对。编号校验不能证明论断一定受原文支持，金融数值与结论仍需人工审阅。
+
+### 离线评测
+
+准备人工标注的 JSONL，每行包含问题及相关片段的稳定 `evidence_id`。片段 ID 可从 `/api/knowledge/documents/{doc_id}` 的 `chunks[].id` 取得；评测问题不能直接从被检索文段机械复制，应覆盖同义问法、跨期对比、证券代码和无答案情形。
+
+```json
+{"query":"毛利率下降的主要原因是什么？","relevant_ids":["实际片段ID"],"kb_ids":["实际资料库ID"],"filters":{"ticker":"600001","as_of":"2025-12-31"}}
+```
+
+```bash
+.venv-kb/bin/python -m src.knowledge.evaluate --config my_config.yaml --cases retrieval_cases.jsonl --top-k 8
+```
+
+命令输出 Hit@K、Recall@K、MRR@K、无答案正确率、平均检索延迟和每个问题的命中详情。无答案样本使用空的 `relevant_ids`；只有真正返回空结果才算正确。前三项指标只统计有答案样本。它只验证检索阶段；报告事实准确率和引用支持率需要额外人工核验。没有真实问题集与真实 Embedding/Reranker 模型之前，不能声称达到任何质量目标。
+
 ## 5. 测试与已知边界
 
-当前离线回归集已通过 106 项自动测试，覆盖知识库、LangChain Retriever、LangGraph 状态图与 SQLite Checkpoint，以及原有记忆、异步桥接、LLM 响应解析与重试、工具、日期、限流和执行器。Qdrant 适配使用官方客户端的本地内存引擎测试，尝试启动 Docker 服务时，本机 Docker/OrbStack 引擎未运行（docker.sock 不存在），尚未完成容器部署验收。前端 `npm run build` 通过，仍有包体较大的构建提示。
+本次知识库与工作流相关的 33 项自动测试通过，覆盖资料入库、Qdrant 快照检索与补索引、精排排序、检索评测、带引用问答、LangChain Retriever、LangGraph 状态图与 SQLite Checkpoint。Qdrant 适配使用官方客户端的本地内存引擎测试；本机 Docker/OrbStack 引擎未运行（docker.sock 不存在），尚未完成真实容器部署验收。当前环境也未安装 `sentence-transformers`，因此真实 Cross-Encoder 推理和真实 Embedding 服务的质量仍待配置后验收。前端 `npm run build` 通过，仍有包体较大的构建提示。
 
 测试命令：
 

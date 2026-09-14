@@ -49,7 +49,7 @@ Financial Research System 是一个面向金融研究场景的异步多 Agent �
 | 联网深度检索 | 支持 Serper、Bing、Bocha，以及 Playwright、Crawl4AI 和 PDF 解析 | 新闻、公告、网页与文档资料 |
 | 数据分析与绘图 | LLM 生成分析代码，受限执行器限制导入、写入目录与执行时间 | 指标分析、表格和可视化图表 |
 | 知识库入库 | PDF、DOCX、MD、TXT 解析，内容哈希去重、版本与状态管理 | 可管理、可检索的研究资料库 |
-| 混合检索 | SQLite FTS5 关键词召回 + 本地向量或 Qdrant + RRF 融合 | 兼顾中文关键词与语义相关性 |
+| 混合检索 | SQLite FTS5 关键词召回 + 本地向量或 Qdrant + RRF 融合 + 可选 Cross-Encoder 精排 | 兼顾中文关键词与语义相关性 |
 | 证据链 | 稳定证据编号、精确引用解析、研究快照、`.knowledge.json` 审计文件 | 报告结论可定位到原始证据 |
 | 双层断点恢复 | LangGraph SQLite Checkpointer 保存图状态，`VariableMemory` 保存 Agent、数据、日志与知识快照 | 工作流与 Agent 均可恢复 |
 | 可视化管理 | React + Ant Design 管理配置、任务、日志、报告与知识库 | 浏览器内完成主要操作 |
@@ -241,6 +241,8 @@ knowledge_base:
   vector_backend: local        # local 或 qdrant
   embedding_model: "your-embedding-model"
   embedding_version: "1"
+  reranker_model: ""            # 可选：Cross-Encoder 模型名称
+  require_semantic: false       # true 时语义检索故障会中止任务
   filters:
     ticker: "600001"
     market: "A"
@@ -308,7 +310,7 @@ Financial-Research-System/
 ├── demo/
 │   ├── backend/                  # FastAPI、WebSocket、知识库接口
 │   └── frontend/                 # React + Ant Design 管理界面
-├── docs/                         # 使用说明、面试解析与示例配置
+├── docs/                         # 使用说明、技术架构与示例配置
 ├── tests/                        # Agent、工具、记忆与知识库测试
 ├── assets/                       # 品牌、架构图和示例报告
 └── compose.knowledge.yaml        # 可选 Qdrant 服务

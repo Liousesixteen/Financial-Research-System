@@ -51,6 +51,8 @@ class FinancialKnowledgeRetriever(BaseRetriever):
                 "retrieval_score": item["score"],
                 "retrieval_mode": response["mode"],
             }
+            if "rerank_score" in item:
+                metadata["rerank_score"] = item["rerank_score"]
             documents.append(Document(page_content=item["text"], metadata=metadata))
 
         memory = self.research_memory

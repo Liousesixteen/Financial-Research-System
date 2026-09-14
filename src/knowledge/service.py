@@ -44,7 +44,7 @@ def normalize(vector):
 
 class KnowledgeBaseService:
     def __init__(self, root='data/knowledge', embedding=None, model_id='', backend='local',
-                 qdrant_url='http://localhost:6333'):
+                 qdrant_url='http://localhost:6333', reranker=None, require_semantic=False):
         self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         (self.root / 'originals').mkdir(exist_ok=True)
@@ -52,6 +52,8 @@ class KnowledgeBaseService:
         self.model_id = model_id
         self.backend = backend
         self.qdrant_url = qdrant_url
+        self.reranker = reranker
+        self.require_semantic = require_semantic
         if backend not in ('local', 'qdrant'):
             raise ValueError('vector backend must be local or qdrant')
         with self.db() as db:
@@ -307,6 +309,32 @@ class KnowledgeBaseService:
         finally:
             client.close()
 
+    def _qdrant_missing(self, rows, dimension):
+        """Backfill documents ingested before Qdrant was selected or after index loss."""
+        client, name = self._qdrant(dimension)
+        try:
+            existing = set()
+            for start in range(0, len(rows), 256):
+                ids = [row['id'] for row in rows[start:start + 256]]
+                points = client.retrieve(name, ids=ids, with_payload=False, with_vectors=False)
+                existing.update(str(point.id).replace('-', '') for point in points)
+            return [row for row in rows if row['id'] not in existing]
+        finally:
+            client.close()
+
+    def _qdrant_query(self, rows, vector, limit):
+        from qdrant_client import models
+        client, name = self._qdrant(len(vector))
+        try:
+            result = client.query_points(
+                name, query=vector,
+                query_filter=models.Filter(must=[models.HasIdCondition(has_id=[row['id'] for row in rows])]),
+                limit=limit,
+            )
+            return [str(point.id).replace('-', '') for point in result.points if point.score > 0.15]
+        finally:
+            client.close()
+
     async def search(self, query, kb_ids=None, filters=None, top_k=8, snapshot=None):
         if not query.strip() or not 1 <= top_k <= 30:
             raise ValueError('Query is required; top_k must be 1–30')
@@ -325,45 +353,58 @@ class KnowledgeBaseService:
         dense, warnings = [], []
         if self.embedding:
             try:
-                vectors = await self._embed([r['text'] for r in rows])
                 query_vector = (await self._embed([query]))[0]
-                if len(query_vector) != len(vectors[0]):
-                    raise ValueError('Embedding dimensions differ')
-                if self.backend == 'qdrant' and snapshot is None:
-                    await asyncio.to_thread(self._qdrant_upsert, rows, vectors)
-                    def remote_search():
-                        from qdrant_client import models
-                        client, name = self._qdrant(len(query_vector))
-                        try:
-                            result = client.query_points(name, query=query_vector,
-                                query_filter=models.Filter(must=[models.HasIdCondition(has_id=[r['id'] for r in rows])]), limit=20)
-                            return [str(p.id).replace('-', '') for p in result.points if p.score > 0.15]
-                        finally:
-                            client.close()
-                    dense = await asyncio.to_thread(remote_search)
+                if self.backend == 'qdrant':
+                    missing = await asyncio.to_thread(self._qdrant_missing, rows, len(query_vector))
+                    if missing:
+                        vectors = await self._embed([row['text'] for row in missing])
+                        await asyncio.to_thread(self._qdrant_upsert, missing, vectors)
+                    dense = await asyncio.to_thread(self._qdrant_query, rows, query_vector, max(20, top_k * 4))
                 else:
+                    vectors = await self._embed([r['text'] for r in rows])
+                    if len(query_vector) != len(vectors[0]):
+                        raise ValueError('Embedding dimensions differ')
                     scores = [(r['id'], sum(a * b for a, b in zip(vector, query_vector))) for r, vector in zip(rows, vectors)]
-                    dense = [key for key, score in sorted(scores, key=lambda p: p[1], reverse=True)[:20] if score > 0.15]
+                    dense = [key for key, score in sorted(scores, key=lambda p: p[1], reverse=True)[:max(20, top_k * 4)] if score > 0.15]
             except Exception as exc:
+                if self.require_semantic:
+                    raise RuntimeError('Semantic retrieval is required but unavailable') from exc
                 warnings.append(f'Semantic search unavailable; keyword fallback ({type(exc).__name__})')
         else:
+            if self.require_semantic:
+                raise ValueError('Semantic retrieval requires a configured embedding model')
             warnings.append('Embedding not configured; keyword search only')
         rank = {}
         for ranking in (lexical, dense):
             for index, key in enumerate(ranking):
                 rank[key] = rank.get(key, 0) + 1 / (61 + index)
         by_id = {r['id']: r for r in rows}
+        ordered = sorted(rank, key=rank.get, reverse=True)
+        rerank_scores = {}
+        if self.reranker and ordered:
+            candidates = ordered[:max(20, top_k * 4)]
+            try:
+                values = await self.reranker.score(query, [by_id[key]['text'] for key in candidates])
+                if len(values) != len(candidates) or not all(math.isfinite(float(value)) for value in values):
+                    raise ValueError('Reranker returned invalid scores')
+                rerank_scores = dict(zip(candidates, map(float, values)))
+                ordered = sorted(candidates, key=rerank_scores.get, reverse=True) + ordered[len(candidates):]
+            except Exception as exc:
+                warnings.append(f'Reranking unavailable; fusion-order fallback ({type(exc).__name__})')
         results, per_doc = [], {}
         # Check deletion once more after potentially slow model/service calls.
         live_ids = None if snapshot is not None else {r['id'] for r in self.corpus(kb_ids or [], filters)}
-        for key in sorted(rank, key=rank.get, reverse=True):
+        for key in ordered:
             if key not in by_id or (live_ids is not None and key not in live_ids):
                 continue
             row = by_id[key]
             if per_doc.get(row['doc_id'], 0) >= max(3, top_k // 2):
                 continue
             per_doc[row['doc_id']] = per_doc.get(row['doc_id'], 0) + 1
-            results.append({**row, 'evidence_id': key, 'score': rank[key]})
+            item = {**row, 'evidence_id': key, 'score': rank[key]}
+            if key in rerank_scores:
+                item['rerank_score'] = rerank_scores[key]
+            results.append(item)
             if len(results) == top_k:
                 break
         return {'results': results, 'mode': 'hybrid' if dense else 'keyword', 'warnings': warnings}

@@ -84,4 +84,6 @@ export const getKnowledgeDocument = (id) => client.get(`/api/knowledge/documents
 export const deleteKnowledgeDocument = (id) => client.delete(`/api/knowledge/documents/${id}`)
 export const reindexKnowledgeDocument = (id) => client.post(`/api/knowledge/documents/${id}/reindex`)
 export const searchKnowledge = (data) => client.post('/api/knowledge/search', data)
+export const answerKnowledge = (data) => client.post('/api/knowledge/answer', data)
+export const getKnowledgeCapabilities = () => client.get('/api/knowledge/capabilities')
 export const knowledgeOriginalUrl = (id, page) => `${API_BASE_URL}/api/knowledge/documents/${id}/original${page ? `#page=${page}` : ''}`

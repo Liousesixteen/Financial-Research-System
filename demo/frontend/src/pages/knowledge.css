@@ -10,6 +10,10 @@
 .kb-toolbar { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 22px 0; }
 .kb-workspace .ant-btn-primary, .kb-workspace .ant-input-search .ant-input-search-button { background: var(--kb-accent); }
 .kb-search { padding: 24px; background: #f6f5f1; border: 1px solid #e7e5de; margin-bottom: 32px; }
+.kb-question-actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+.kb-answer { margin-top: 22px; padding: 22px; background: #fff; border-left: 3px solid var(--kb-accent); }
+.kb-answer p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; }
+.kb-answer .ant-btn-link { padding-left: 0; white-space: normal; height: auto; text-align: left; color: var(--kb-accent); }
 .kb-section-label { margin-bottom: 18px; }
 .kb-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0 10px; }
 .kb-muted { color: #66737a; font-size: 12px; line-height: 1.7; }

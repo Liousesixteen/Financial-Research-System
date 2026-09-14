@@ -7,7 +7,8 @@ from pathlib import Path
 from .service import KnowledgeBaseService
 
 DEFAULTS = {'enabled': False, 'kb_ids': [], 'mode': 'hybrid', 'as_of': '', 'top_k': 8,
-            'vector_backend': 'local', 'qdrant_url': 'http://localhost:6333'}
+            'vector_backend': 'local', 'qdrant_url': 'http://localhost:6333',
+            'reranker_model': '', 'require_semantic': False}
 
 
 def settings(config):
@@ -25,9 +26,14 @@ def service_for(config):
     embedding = config.llm_dict.get(model)
     endpoint = str(getattr(getattr(embedding, 'client', None), 'base_url', ''))
     identity = f'{model}:{endpoint}:{opts.get("embedding_version", "1")}' if embedding else ''
+    reranker = None
+    if opts.get('reranker_model'):
+        from .reranker import CrossEncoderReranker
+        reranker = CrossEncoderReranker(opts['reranker_model'])
     default_root = Path(__file__).resolve().parents[2] / 'data' / 'knowledge'
     return KnowledgeBaseService(opts.get('storage_dir') or os.getenv('FRS_KB_DIR', str(default_root)),
-                                embedding, identity, opts['vector_backend'], opts['qdrant_url'])
+                                embedding, identity, opts['vector_backend'], opts['qdrant_url'],
+                                reranker, opts.get('require_semantic', False))
 
 
 def signature(config):
@@ -46,6 +52,8 @@ def initialize_session(memory):
     if opts['mode'] not in ('hybrid', 'knowledge_only'):
         raise ValueError('Unknown knowledge mode')
     service = service_for(memory.config)
+    if opts.get('require_semantic') and not service.embedding:
+        raise ValueError('Semantic retrieval requires a configured embedding model')
     if set(opts['kb_ids']) - {r['id'] for r in service.libraries()}:
         raise ValueError('Selected knowledge base does not exist')
     filters = {**opts.get('filters', {}), 'as_of': opts['as_of']}

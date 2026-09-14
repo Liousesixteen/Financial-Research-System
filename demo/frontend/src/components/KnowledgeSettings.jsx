@@ -18,6 +18,8 @@ export default function KnowledgeSettings() {
         <Form.Item name={['knowledge_base', 'as_of']} label={c('研究截止日期（可选）', 'Research cutoff (optional)')}><Input type="date" /></Form.Item>
         <Form.Item name={['knowledge_base', 'vector_backend']} label={c('向量存储', 'Vector backend')}><Select options={[{ value: 'local', label: c('本地（无需独立服务）', 'Local (no server required)') }, { value: 'qdrant', label: 'Qdrant' }]} /></Form.Item>
         <Form.Item name={['knowledge_base', 'qdrant_url']} label="Qdrant URL"><Input placeholder="http://localhost:6333" /></Form.Item>
+        <Form.Item name={['knowledge_base', 'reranker_model']} label={c('精排模型（可选）', 'Reranker model (optional)')}><Input placeholder="BAAI/bge-reranker-v2-m3" /></Form.Item>
+        <Form.Item name={['knowledge_base', 'require_semantic']} valuePropName="checked" label={c('要求语义检索可用', 'Require semantic retrieval')}><Switch /></Form.Item>
         <Alert type="info" showIcon message={c('仅知识库模式禁用联网工具和生成的 Python，不生成分析图表；模型仍使用你配置的服务。恢复执行保留原资料快照，更新资料后请开始新的研究。', 'Knowledge-only disables external tools and generated Python/charts. Your configured model is still used. Resuming preserves the original evidence snapshot; start a fresh run to use new documents.')} />
     </Card>
 }

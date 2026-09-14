@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Alert, Button, Drawer, Empty, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, Upload, message } from 'antd'
 import { DatabaseOutlined, FileSearchOutlined, PlusOutlined, UploadOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, ArrowRightOutlined } from '@ant-design/icons'
-import { listKnowledgeLibraries, createKnowledgeLibrary, renameKnowledgeLibrary, listKnowledgeDocuments, uploadKnowledgeDocument, getKnowledgeDocument, deleteKnowledgeDocument, reindexKnowledgeDocument, searchKnowledge, knowledgeOriginalUrl } from '../api/client'
+import { listKnowledgeLibraries, createKnowledgeLibrary, renameKnowledgeLibrary, listKnowledgeDocuments, uploadKnowledgeDocument, getKnowledgeDocument, deleteKnowledgeDocument, reindexKnowledgeDocument, searchKnowledge, answerKnowledge, getKnowledgeCapabilities, knowledgeOriginalUrl } from '../api/client'
 import { useLanguage } from '../contexts/LanguageContext'
 import './knowledge.css'
 
@@ -15,6 +15,9 @@ export default function KnowledgePage() {
     const [query, setQuery] = useState('')
     const [results, setResults] = useState(null)
     const [searching, setSearching] = useState(false)
+    const [answering, setAnswering] = useState(false)
+    const [answer, setAnswer] = useState(null)
+    const [canAnswer, setCanAnswer] = useState(false)
     const [filters, setFilters] = useState({})
     const [nameModal, setNameModal] = useState(null)
     const [name, setName] = useState('')
@@ -38,8 +41,8 @@ export default function KnowledgePage() {
         catch (e) { if (!quiet) showError(e) }
         finally { if (!quiet) setLoading(false) }
     }
-    useEffect(() => { loadLibraries() }, [])
-    useEffect(() => { setDocuments([]); setResults(null); if (selected) loadDocuments(selected) }, [selected])
+    useEffect(() => { loadLibraries(); getKnowledgeCapabilities().then(r => setCanAnswer(r.data.answer)).catch(() => setCanAnswer(false)) }, [])
+    useEffect(() => { setDocuments([]); setResults(null); setAnswer(null); if (selected) loadDocuments(selected) }, [selected])
     useEffect(() => {
         if (!selected || !documents.some(d => ['queued', 'parsing', 'indexing'].includes(d.status))) return
         const timer = setInterval(() => loadDocuments(selected, true), 2500)
@@ -70,11 +73,24 @@ export default function KnowledgePage() {
     }
     const search = async () => {
         if (!query.trim() || !selected) return
-        setSearching(true)
+        setSearching(true); setAnswer(null)
         const id = selected
         try { const { data } = await searchKnowledge({ query, kb_ids: [id], filters }); if (selection.current === id) setResults(data) }
         catch (e) { showError(e) }
         finally { setSearching(false) }
+    }
+    const ask = async () => {
+        if (!query.trim() || !selected || !canAnswer) return
+        setAnswering(true)
+        const id = selected
+        try {
+            const { data } = await answerKnowledge({ query, kb_ids: [id], filters })
+            if (selection.current === id) {
+                setAnswer(data)
+                setResults({ results: data.evidence, mode: data.mode, warnings: data.warnings })
+            }
+        } catch (e) { showError(e) }
+        finally { setAnswering(false) }
     }
     const openDocument = async (id, chunkId) => {
         try { const { data } = await getKnowledgeDocument(id); setPreview({ ...data, chunkId }) }
@@ -96,7 +112,12 @@ export default function KnowledgePage() {
         <div className="kb-masthead"><div><div className="kb-eyebrow">FINANCIAL RESEARCH SYSTEM / RESEARCH LIBRARY</div><h1>{c('让研究有据可循', 'Research starts with evidence.')}</h1><p>{c('保存原始资料，检索关键证据，将每一个判断连接到来源。', 'Keep source documents, retrieve evidence, and trace every research claim.')}</p></div><div className="kb-count"><strong>{documents.filter(d => d.status === 'ready').length.toString().padStart(2, '0')}</strong><span>{c('可检索文档', 'indexed documents')}</span></div></div>
         <div className="kb-toolbar"><Space wrap><DatabaseOutlined /><Select aria-label={c('选择知识库', 'Select library')} style={{ minWidth: 220 }} placeholder={c('选择知识库', 'Select library')} value={selected || undefined} onChange={setSelected} options={libraries.map(l => ({ label: l.name, value: l.id }))} /><Button icon={<PlusOutlined />} onClick={() => { setName(''); setNameModal('create') }}>{c('新建', 'New')}</Button><Button aria-label={c('重命名知识库', 'Rename library')} disabled={!selected} icon={<EditOutlined />} onClick={() => { setName(libraries.find(l => l.id === selected)?.name || ''); setNameModal('rename') }} /></Space><Button type="primary" icon={<UploadOutlined />} disabled={!selected} onClick={() => setUploadOpen(true)}>{c('上传资料', 'Upload documents')}</Button></div>
         {!libraries.length ? <Empty description={c('创建第一个知识库，开始积累研究资料', 'Create your first research library')}><Button type="primary" onClick={() => setNameModal('create')}>{c('创建知识库', 'Create library')}</Button></Empty> : <>
-            <section className="kb-search"><div className="kb-section-label">01 / {c('证据检索', 'EVIDENCE SEARCH')}</div><Input.Search size="large" aria-label={c('检索问题', 'Research question')} placeholder={c('例如：毛利率下降的原因是什么？', 'What caused the decline in gross margin?')} value={query} onChange={e => setQuery(e.target.value)} onSearch={search} loading={searching} enterButton={<><FileSearchOutlined /> {c('查找原文', 'Find evidence')}</>} /><div className="kb-filters">{[['company', '公司', 'Company'], ['ticker', '证券代码', 'Ticker'], ['market', '市场', 'Market'], ['industry', '行业', 'Industry'], ['report_period', '报告期', 'Period']].map(([key, zh, en]) => <Input key={key} aria-label={c(zh, en)} placeholder={c(zh, en)} value={filters[key] || ''} onChange={e => setFilters({ ...filters, [key]: e.target.value })} />)}<Input type="date" aria-label={c('研究截止日期', 'Research cutoff date')} value={filters.as_of || ''} onChange={e => setFilters({ ...filters, as_of: e.target.value })} /></div><div className="kb-muted">{c('筛选为精确匹配。截止日期按披露日过滤，未标注日期的资料将被排除。', 'Filters match exactly. A cutoff excludes later disclosures and documents without a publication date.')}</div>
+            <section className="kb-search">
+                <div className="kb-section-label">01 / {c('证据检索', 'EVIDENCE SEARCH')}</div>
+                <Input.Search size="large" aria-label={c('检索问题', 'Research question')} placeholder={c('例如：毛利率下降的原因是什么？', 'What caused the decline in gross margin?')} value={query} onChange={e => setQuery(e.target.value)} onSearch={search} loading={searching} enterButton={<><FileSearchOutlined /> {c('查找原文', 'Find evidence')}</>} />
+                <div className="kb-question-actions"><Button type="primary" onClick={ask} loading={answering} disabled={!canAnswer || !selected || !query.trim()}>{c('据证据回答', 'Answer with evidence')}</Button><span className="kb-muted">{canAnswer ? c('回答将附可打开的原文证据。', 'Answers include source evidence.') : c('配置完整研报服务的生成模型后可用。', 'Configure a generation model in the full report service to enable answers.')}</span></div>
+                <div className="kb-filters">{[['company', '公司', 'Company'], ['ticker', '证券代码', 'Ticker'], ['market', '市场', 'Market'], ['industry', '行业', 'Industry'], ['report_period', '报告期', 'Period']].map(([key, zh, en]) => <Input key={key} aria-label={c(zh, en)} placeholder={c(zh, en)} value={filters[key] || ''} onChange={e => setFilters({ ...filters, [key]: e.target.value })} />)}<Input type="date" aria-label={c('研究截止日期', 'Research cutoff date')} value={filters.as_of || ''} onChange={e => setFilters({ ...filters, as_of: e.target.value })} /></div><div className="kb-muted">{c('筛选为精确匹配。截止日期按披露日过滤，未标注日期的资料将被排除。', 'Filters match exactly. A cutoff excludes later disclosures and documents without a publication date.')}</div>
+                {answer && <div className="kb-answer"><div className="kb-section-label">{c('基于资料的回答', 'GROUNDED ANSWER')}</div><p>{answer.answer}</p><Space wrap>{answer.citations.map(item => <Button key={item.evidence_id} type="link" onClick={() => openDocument(item.doc_id, item.evidence_id)}>{item.title} · {item.locator}</Button>)}</Space></div>}
                 {results && <div className="kb-results"><Tag color={results.mode === 'hybrid' ? 'blue' : 'default'}>{results.mode === 'hybrid' ? c('混合检索', 'Hybrid search') : c('关键词检索', 'Keyword search')}</Tag>{results.warnings.map(w => <div key={w} className="kb-muted">{warningText(w)}</div>)}{!results.results.length ? <Empty description={c('没有找到符合条件的证据，试试其他关键词或筛选条件。', 'No matching evidence. Try another query or filter.')} /> : results.results.map((r, i) => <article className="kb-evidence" key={r.evidence_id}><div className="kb-evidence-number">{String(i + 1).padStart(2, '0')}</div><div><h3>{r.title}</h3><div className="kb-muted">{r.locator} · {r.metadata.published_at || c('日期未标注', 'Date unknown')} · {r.metadata.report_period}</div><p>{r.text}</p><Button type="link" onClick={() => openDocument(r.doc_id, r.id)}>{c('查看来源', 'Open source')} <ArrowRightOutlined /></Button></div></article>)}</div>}
             </section>
             <section><div className="kb-section-label kb-table-label">02 / {c('资料档案', 'DOCUMENT ARCHIVE')}<Button size="small" icon={<ReloadOutlined />} onClick={() => loadDocuments()}>{c('刷新', 'Refresh')}</Button></div><Table rowKey="id" dataSource={documents} columns={columns} loading={loading} pagination={{ pageSize: 8, hideOnSinglePage: true }} scroll={{ x: 850 }} locale={{ emptyText: c('上传年报、公告或研究材料。支持 PDF / DOCX / MD / TXT。', 'Upload annual reports, filings or research. PDF / DOCX / MD / TXT.') }} /></section>

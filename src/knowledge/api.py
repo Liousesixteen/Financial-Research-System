@@ -18,6 +18,8 @@ class KnowledgeSettings(BaseModel):
     qdrant_url: str = 'http://localhost:6333'
     embedding_model: str = ''
     embedding_version: str = '1'
+    reranker_model: str = ''
+    require_semantic: bool = False
     filters: dict[str, str] = Field(default_factory=dict)
 
     @field_validator('as_of')
@@ -45,7 +47,11 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=8, ge=1, le=30)
 
 
-def create_router(get_service):
+class AnswerRequest(SearchRequest):
+    top_k: int = Field(default=8, ge=1, le=8)
+
+
+def create_router(get_service, get_answer_model=None):
     router = APIRouter(prefix='/api/knowledge', tags=['knowledge'])
 
     def safely(fn, *args):
@@ -132,5 +138,25 @@ def create_router(get_service):
             return await get_service().search(request.query, request.kb_ids, request.filters, request.top_k)
         except (ValueError, TypeError) as exc:
             raise HTTPException(422, str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(503, str(exc))
+
+    @router.get('/capabilities')
+    def capabilities():
+        return {'answer': get_answer_model is not None and get_answer_model() is not None}
+
+    @router.post('/answer')
+    async def answer(request: AnswerRequest):
+        model = get_answer_model() if get_answer_model else None
+        if model is None:
+            raise HTTPException(503, 'Configure a generation model in the full report service to answer questions')
+        from .answer import answer_question
+        try:
+            return await answer_question(get_service(), model, request.query, request.kb_ids,
+                                         request.filters, request.top_k)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, str(exc))
+        except RuntimeError as exc:
+            raise HTTPException(503, str(exc))
 
     return router

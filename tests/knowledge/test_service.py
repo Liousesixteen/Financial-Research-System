@@ -165,6 +165,48 @@ async def test_qdrant_adapter_with_embedded_test_server(service, monkeypatch):
     assert result['mode'] == 'hybrid' and all(r['kb_id'] == kb for r in result['results'])
 
 
+@pytest.mark.asyncio
+async def test_qdrant_backfills_and_serves_frozen_agent_snapshot(service, monkeypatch):
+    from qdrant_client import QdrantClient, models
+    client = QdrantClient(':memory:')
+    client.create_collection('test', vectors_config=models.VectorParams(size=2, distance=models.Distance.COSINE))
+    monkeypatch.setattr(client, 'close', lambda: None)
+    monkeypatch.setattr(service, '_qdrant', lambda dimension: (client, 'test'))
+    service.embedding = Embedding(); service.model_id = 'test'
+    kb = service.create_library('A')['id']
+    doc = await add(service, kb, 'margin improved')  # Ingested before Qdrant was selected.
+    snapshot = service.corpus([kb])
+    service.backend = 'qdrant'
+    calls = []
+    original = service._qdrant_query
+    def observed(*args):
+        calls.append(True)
+        return original(*args)
+    monkeypatch.setattr(service, '_qdrant_query', observed)
+    first = await service.search('margin', snapshot=snapshot)
+    assert calls and first['results'][0]['doc_id'] == doc['doc_id']
+    service.delete_document(doc['doc_id'])
+    assert not (await service.search('margin', [kb]))['results']
+    assert (await service.search('margin', snapshot=snapshot))['results'][0]['doc_id'] == doc['doc_id']
+
+
+@pytest.mark.asyncio
+async def test_reranker_changes_fused_order_and_strict_semantic_fails_closed(service):
+    kb = service.create_library('A')['id']
+    await add(service, kb, 'margin first')
+    await add(service, kb, 'margin second')
+    class Reranker:
+        async def score(self, query, texts):
+            return [10.0 if 'second' in text else 0.0 for text in texts]
+    service.embedding = Embedding(); service.model_id = 'test'; service.reranker = Reranker()
+    result = await service.search('margin', [kb])
+    assert result['results'][0]['text'] == 'margin second'
+    assert result['results'][0]['rerank_score'] == 10.0
+    service.embedding = None; service.require_semantic = True
+    with pytest.raises(ValueError, match='embedding model'):
+        await service.search('margin', [kb])
+
+
 def make_pdf(text):
     # Minimal valid one-page fixture with a standard font; avoids renderer dependencies.
     stream = f'BT /F1 12 Tf 72 720 Td ({text}) Tj ET'.encode()

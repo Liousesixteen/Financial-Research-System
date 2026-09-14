@@ -84,3 +84,8 @@ evaluations/
 # Knowledge originals/indexes and verification environment
 data/knowledge/
 .venv-kb/
+
+# Local resume and interview preparation materials
+docs/*RESUME*.md
+docs/*INTERVIEW*.md
+docs/PROJECT_COMPLETE_GUIDE.zh-CN.md

@@ -40,6 +40,8 @@ knowledge_base:
   top_k: 8
   vector_backend: local
   qdrant_url: http://localhost:6333
+  reranker_model: ''
+  require_semantic: false
 
 # Durable Agent orchestration. Set engine: legacy to use the previous priority scheduler.
 workflow:
