@@ -125,30 +125,6 @@ flowchart TD
 
 详细说明请阅读 [知识库使用文档](docs/KNOWLEDGE_BASE.md)。
 
-## 🖥️ 报告示例
-
-### 公司研究报告
-
-<p align="center">
-  <img src="assets/example5_company.png" width="94%" alt="Company Research Report Preview" />
-</p>
-
-### 行业研究报告
-
-<p align="center">
-  <img src="assets/example6_industry.jpg" width="94%" alt="Industry Research Report Preview" />
-</p>
-
-可直接查看仓库中的示例 PDF：
-
-- [中国移动公司研究报告](assets/example_reports/ChinaMobile.pdf)
-- [泡泡玛特公司研究报告](assets/example_reports/PopMart.pdf)
-- [商汤科技公司研究报告](assets/example_reports/SenseTime.pdf)
-- [优然牧业公司研究报告](assets/example_reports/YouranDairy.pdf)
-- [金融 Agent 行业研究报告](assets/example_reports/Financial_Agent_Industry.pdf)
-
-> 示例报告用于展示系统输出形式，不构成投资建议；其中的观点、数据与结论应结合原始来源重新核验。
-
 ## 🚀 快速开始
 
 ### 1. 环境要求
